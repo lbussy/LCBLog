@@ -1,7 +1,27 @@
+<!-- omit in toc -->
 # LCBLog - A Thread-Safe C++ Logging Library
 
 ![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
 ![C++](https://img.shields.io/badge/language-C%2B%2B17-blue)
+
+<!-- omit in toc -->
+## Table of Contents
+
+- [📌 Overview](#-overview)
+- [🚀 Features](#-features)
+- [📂 Project Structure](#-project-structure)
+- [🛠️ Installation \& Compilation](#️-installation--compilation)
+  - [🔧 Prerequisites](#-prerequisites)
+  - [💻 Building the Library (`liblcblog.a`)](#-building-the-library-liblcbloga)
+  - [🔍 Running Tests](#-running-tests)
+  - [🛠 Debug Build (with symbols)](#-debug-build-with-symbols)
+  - [🧹 Clean Build Artifacts](#-clean-build-artifacts)
+  - [🔎 Static Code Analysis (`cppcheck`)](#-static-code-analysis-cppcheck)
+- [✏️ Usage Example](#️-usage-example)
+- [📜 License](#-license)
+- [👨‍💻 Author](#-author)
+- [⭐ Contributing](#-contributing)
+
 
 ## 📌 Overview
 
@@ -18,11 +38,11 @@
 
 ## 🚀 Features
 
-[✔] **Log Level Filtering** – Messages below the set log level are ignored.
-[✔] **Thread Safety** – Multiple threads can log safely using `std::mutex`.
-[✔] **Customizable Output** – Logs can be redirected to different streams.
-[✔] **Performance Optimized** – Efficient whitespace handling in log messages.
-[✔] **Automatic Formatting** – Ensures aligned and readable log output.
+- [✔] **Log Level Filtering** – Messages below the set log level are ignored.
+- [✔] **Thread Safety** – Multiple threads can log safely using `std::mutex`.
+- [✔] **Customizable Output** – Logs can be redirected to different streams.
+- [✔] **Performance Optimized** – Efficient whitespace handling in log messages.
+- [✔] **Automatic Formatting** – Ensures aligned and readable log output.
 
 ---
 
