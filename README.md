@@ -151,7 +151,7 @@ This project is licensed under the MIT License. See [LICENSE.md](LICENSE.md) for
 
 ## 👨‍💻 Author
 
-Lee C. Bussy – @LBussy
+Lee C. Bussy – [@LBussy](https://github.com/lbussy)
 
 For contributions, bug reports, or feature requests, feel free to open an issue or submit a pull request. 🚀
 
