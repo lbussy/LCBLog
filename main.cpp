@@ -33,7 +33,7 @@
  * SOFTWARE.
  */
 
- #ifdef DEBUG_MAIN_LCBLOG
+#ifdef DEBUG_MAIN_LCBLOG
 #include "lcblog.hpp"
 #include <fstream>
 #include <iostream>
