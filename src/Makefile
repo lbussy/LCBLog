@@ -26,11 +26,6 @@ CXX         = g++
 CXXFLAGS    += -Wall -Werror -fmax-errors=5
 CXXFLAGS    += -Wno-psabi -std=c++17 -MMD -MP
 
-# Debug flags for testing (Automatically enabled for 'make test')
-ifeq ($(MAKECMDGOALS), test)
-    CXXFLAGS += -DDEBUG_MAIN_LCBLOG
-endif
-
 # Linker flags (if needed)
 LDLIBS      = 
 

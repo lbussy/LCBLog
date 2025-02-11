@@ -33,7 +33,6 @@
  * SOFTWARE.
  */
 
-#ifdef DEBUG_MAIN_LCBLOG
 #include "lcblog.hpp"
 #include <fstream>
 #include <iostream>
@@ -41,13 +40,13 @@
 #include <vector>
 #include <cassert>
 
-// Create test log files to capture output
-std::ofstream logFile("test_log.out");
-std::ofstream errFile("test_log.err");
+// Log to files
+// std::ofstream logFile("test_log.out");
+// std::ofstream errFile("test_log.err");
+// LCBLog llog(logFile, errFile);
 
-// Test LCBLog with file output
-LCBLog llog(logFile, errFile);
-// LCBLog llog;
+// Log to stdout/stderr
+LCBLog llog;
 
 void threadSafetyTest() {
     std::cout << "Testing thread safety..." << std::endl;
@@ -213,7 +212,7 @@ void longTest() {
     llog.enableTimestamps(false);
     llog.logS(INFO, FATAL, "Logging at DEBUG level");
     llog.setLogLevel(DEBUG);
-    std::cout << std::endl << "Testing standard out." << std::endl;
+    std::cout << std::endl << "Testing stdout." << std::endl;
     llog.logS(INFO, 100);
     llog.logS(INFO, 100.01);
     llog.logS(INFO, "\t\t\t\t\t\tFoo");
@@ -223,7 +222,7 @@ void longTest() {
     llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
 
     llog.enableTimestamps(true);
-    std::cout << std::endl << "Testing standard out with stamps." << std::endl;
+    std::cout << std::endl << "Testing stdout with timestamps." << std::endl;
     llog.logS(INFO, 100);
     llog.logS(INFO, 100.01);
     llog.logS(INFO, "\t\t\t\t\t\tFoo");
@@ -233,24 +232,24 @@ void longTest() {
     llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
 
     llog.enableTimestamps(false);
-    std::cerr << std::endl << "Testing standard error." << std::endl;
-    llog.logS(INFO, 100);
-    llog.logS(INFO, 100.01);
-    llog.logS(INFO, "\t\t\t\t\t\tFoo");
-    llog.logS(INFO, "Foo", " foo foo.");
-    llog.logS(INFO, "Foo", " \t\t\t\t\t\t\t\t\tfoo foo.");
-    llog.logS(INFO, "Foo ", 100, " \t\t\t\t\t\t\t\t\tfoo foo.");
-    llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
+    std::cerr << std::endl << "Testing stderr." << std::endl;
+    llog.logE(INFO, 100);
+    llog.logE(INFO, 100.01);
+    llog.logE(INFO, "\t\t\t\t\t\tFoo");
+    llog.logE(INFO, "Foo", " foo foo.");
+    llog.logE(INFO, "Foo", " \t\t\t\t\t\t\t\t\tfoo foo.");
+    llog.logE(INFO, "Foo ", 100, " \t\t\t\t\t\t\t\t\tfoo foo.");
+    llog.logE(INFO, "Multiline ", 100.01, " \nNew line.");
 
     llog.enableTimestamps(true);
-    std::cerr << std::endl << "Testing standard error." << std::endl;
-    llog.logS(INFO, 100);
-    llog.logS(INFO, 100.01);
-    llog.logS(INFO, "\t\t\t\t\t\tFoo");
-    llog.logS(INFO, "Foo", " foo foo.");
-    llog.logS(INFO, "Foo", " \t\t\t\t\t\t\t\t\tfoo foo.");
-    llog.logS(INFO, "Foo ", 100, " \t\t\t\t\t\t\t\t\tfoo foo.");
-    llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
+    std::cerr << std::endl << "Testing stderr with timestamps." << std::endl;
+    llog.logE(INFO, 100);
+    llog.logE(INFO, 100.01);
+    llog.logE(INFO, "\t\t\t\t\t\tFoo");
+    llog.logE(INFO, "Foo", " foo foo.");
+    llog.logE(INFO, "Foo", " \t\t\t\t\t\t\t\t\tfoo foo.");
+    llog.logE(INFO, "Foo ", 100, " \t\t\t\t\t\t\t\t\tfoo foo.");
+    llog.logE(INFO, "Multiline ", 100.01, " \nNew line.");
 }
 
 int main() {
@@ -259,8 +258,7 @@ int main() {
     // crushTestViaLog();
     // multiLineLogTest();
     // messageFormattingTest();
-    runLogLevelFilteringTests();
-    //longTest();
+    //runLogLevelFilteringTests();
+    longTest();
     return 0;
 }
-#endif
