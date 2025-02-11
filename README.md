@@ -49,19 +49,24 @@
 ## 📂 Project Structure
 
 ``` text
-📁 lcblog
-├── 📜 lcblog.hpp    # Header file (public API)
-├── 📜 lcblog.cpp    # Implementation file
-├── 📜 lcblog.tpp    # Template definitions
-├── 📜 main.cpp      # Test executable (debug mode only)
-├── 📜 Makefile      # Build system
-├── 📜 README.md     # Project documentation
-└── 📜 LICENSE       # MIT License
+📁 LCBLog
+├─ 📜 README.md     # Project documentation
+└─ 📜 LICENSE       # MIT License
+└─| src
+  |-- 📜 lcblog.hpp # Header file (public API)
+  |-- 📜 lcblog.cpp # Implementation file
+  |-- 📜 lcblog.tpp # Template definitions
+  |-- 📜 main.cpp   # Test executable (test target only)
+  └── 📜 Makefile   # Build system
 ```
 
 ---
 
 ## 🛠️ Installation & Compilation
+
+This library is intended to be included as a submodule within a project that requires logging.
+These instructions apply to stand-alone compilation and testing, and are not intended to serve
+as a recipe for learning submodules and programming.
 
 ### 🔧 Prerequisites
 
