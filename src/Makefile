@@ -32,7 +32,8 @@ LDLIBS      =
 # Source files
 SRC         = $(NAME).cpp
 OBJ         = $(SRC:.cpp=.o)
-DEP         = $(OBJ:.o=.d)
+TEST_DEP 	= $(TEST_NAME).d
+DEP 		= $(OBJ:.o=.d) $(TEST_DEP)
 
 # Ensure parallel compilation
 MAKEFLAGS += -j$(shell nproc)
