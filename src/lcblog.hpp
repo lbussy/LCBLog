@@ -50,7 +50,8 @@
  * This enumeration represents different log levels, which determine
  * the severity and importance of logged messages.
  */
-enum LogLevel {
+enum LogLevel
+{
     DEBUG = 0, ///< Debug-level messages for detailed troubleshooting.
     INFO,      ///< Informational messages for general system state.
     WARN,      ///< Warnings indicating potential issues.
@@ -73,7 +74,8 @@ std::string logLevelToString(LogLevel level);
  * Provides a mechanism for logging messages with different severity levels,
  * timestamping, and customizable output streams.
  */
-class LCBLog {
+class LCBLog
+{
 public:
     /**
      * @brief Constructs the logging class with specified output streams.
@@ -81,7 +83,7 @@ public:
      * @param outStream The output stream for standard logs (default: std::cout).
      * @param errStream The output stream for error logs (default: std::cerr).
      */
-    explicit LCBLog(std::ostream& outStream = std::cout, std::ostream& errStream = std::cerr);
+    explicit LCBLog(std::ostream &outStream = std::cout, std::ostream &errStream = std::cerr);
 
     /**
      * @brief Sets the minimum log level for message output.
@@ -109,7 +111,7 @@ public:
      * @param args Additional message content.
      */
     template <typename T, typename... Args>
-    void log(LogLevel level, std::ostream& stream, T t, Args... args);
+    void log(LogLevel level, std::ostream &stream, T t, Args... args);
 
     /**
      * @brief Logs a message to the standard output stream.
@@ -121,7 +123,8 @@ public:
      * @param args Additional message content.
      */
     template <typename T, typename... Args>
-    void logS(LogLevel level, T t, Args... args) {
+    void logS(LogLevel level, T t, Args... args)
+    {
         log(level, out, t, args...);
     }
 
@@ -135,7 +138,8 @@ public:
      * @param args Additional message content.
      */
     template <typename T, typename... Args>
-    void logE(LogLevel level, T t, Args... args) {
+    void logE(LogLevel level, T t, Args... args)
+    {
         log(level, err, t, args...);
     }
 
@@ -147,11 +151,11 @@ public:
     void enableTimestamps(bool enable);
 
 private:
-    LogLevel logLevel;              ///< The current log level threshold.
-    std::ostream& out;              ///< Stream for standard log output.
-    std::ostream& err;              ///< Stream for error log output.
-    std::mutex logMutex;            ///< Mutex for thread-safe logging.
-    bool printTimestamps = false;   ///< LOgger should print timestamp.
+    LogLevel logLevel;            ///< The current log level threshold.
+    std::ostream &out;            ///< Stream for standard log output.
+    std::ostream &err;            ///< Stream for error log output.
+    std::mutex logMutex;          ///< Mutex for thread-safe logging.
+    bool printTimestamps = false; ///< LOgger should print timestamp.
 
     /**
      * @brief Logs a formatted message to a specified stream.
@@ -164,14 +168,14 @@ private:
      * @param args Additional message content.
      */
     template <typename T, typename... Args>
-    void logToStream(std::ostream& stream, LogLevel level, T t, Args... args);
+    void logToStream(std::ostream &stream, LogLevel level, T t, Args... args);
 
     /**
      * @brief Sanitizes a string by removing unwanted characters.
      *
      * @param s The string to sanitize.
      */
-    static void crush(std::string& s);
+    static void crush(std::string &s);
 
     /**
      * @brief Generates a timestamp string for log entries.
