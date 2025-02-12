@@ -75,18 +75,37 @@ void LCBLog::logToStream(std::ostream& stream, LogLevel level, T t, Args... args
     oss << t;  // First argument is directly added
 
     if constexpr (sizeof...(args) > 0) {
-        auto shouldSkipSpace = [](const auto& arg) -> bool {
-            if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, std::string>) {
-                return arg.size() == 1 && (arg == "." || arg == "," || arg == ";" || arg == ":");
-            } else if constexpr (std::is_same_v<std::decay_t<decltype(arg)>, const char*>) {
-                std::string strArg = arg;
-                return strArg.size() == 1 && (strArg == "." || strArg == "," || strArg == ";" || strArg == ":");
+        auto shouldSkipSpace = [](const auto& arg, const auto& prevArg) -> bool {
+            std::string strArg = std::string(arg); // Ensure arg is a string
+
+            // Only attempt to convert `prevArg` if it's a valid string type
+            std::string prevStr;
+            if constexpr (std::is_convertible_v<decltype(prevArg), std::string>) {
+                prevStr = std::string(prevArg);
+            } else {
+                prevStr = "";  // Default to empty string if conversion is not possible
             }
+
+            // Skip space before certain punctuation
+            if (strArg.size() == 1 && (strArg == "." || strArg == "," || strArg == ";" || strArg == ":")) {
+                return true;
+            }
+
+            // Skip space before `")"` only if `prevStr` is exactly one space
+            if (strArg == ")" && prevStr == " ") {
+                return true;
+            }
+
             return false;
         };
 
-        // Fold expression to append arguments correctly
-        ((shouldSkipSpace(args) ? oss << args : oss << " " << args), ...);
+        if constexpr (sizeof...(args) > 0) {
+            const auto appendArgs = [&](const auto& first, const auto&... rest) {
+                oss << first;  // First argument is directly added
+                ((shouldSkipSpace(rest, first) ? oss << rest : oss << " " << rest), ...);
+            };
+            appendArgs(args...);
+        }
     }
 
     std::string logMessage = oss.str();

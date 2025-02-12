@@ -145,31 +145,6 @@ void LCBLog::crush(std::string &s)
     s.erase(std::unique(s.begin(), s.end(), [](char a, char b)
                         { return std::isspace(a) && std::isspace(b); }),
             s.end());
-
-    // Remove spaces immediately after '(' and before ')'
-    auto removeSpaceBefore = [](std::string &str, const std::string &pattern)
-    {
-        size_t pos = 0;
-        while ((pos = str.find(pattern, pos)) != std::string::npos)
-        {
-            str.erase(pos + 1, str.find_first_not_of(" ", pos + 1) - (pos + 1));
-            pos += 1;
-        }
-    };
-
-    auto removeSpaceAfter = [](std::string &str, const std::string &pattern)
-    {
-        size_t pos = 0;
-        while ((pos = str.find(pattern, pos)) != std::string::npos)
-        {
-            size_t start = str.find_last_not_of(" ", pos - 1);
-            str.erase(start + 1, pos - start - 1);
-            pos = start + 1;
-        }
-    };
-
-    removeSpaceAfter(s, ")");
-    removeSpaceBefore(s, "(");
 }
 
 /**
