@@ -33,7 +33,6 @@
  * SOFTWARE.
  */
 
-#ifdef DEBUG_MAIN_LCBLOG
 #include "lcblog.hpp"
 #include <fstream>
 #include <iostream>
@@ -41,39 +40,45 @@
 #include <vector>
 #include <cassert>
 
-// Create test log files to capture output
-std::ofstream logFile("test_log.out");
-std::ofstream errFile("test_log.err");
+// Log to files
+// std::ofstream logFile("test_log.out");
+// std::ofstream errFile("test_log.err");
+// LCBLog llog(logFile, errFile);
 
-// Test LCBLog with file output
-LCBLog llog(logFile, errFile);
-// LCBLog llog;
+// Log to stdout/stderr
+LCBLog llog;
 
-void threadSafetyTest() {
+void threadSafetyTest()
+{
     std::cout << "Testing thread safety..." << std::endl;
 
     // Lambda function to log in multiple threads
-    auto logTask = [](int threadId) {
-        for (int i = 0; i < 5; ++i) {
+    auto logTask = [](int threadId)
+    {
+        for (int i = 0; i < 5; ++i)
+        {
             llog.logS(INFO, "Thread " + std::to_string(threadId) + " logging message " + std::to_string(i));
         }
     };
 
     // Create multiple threads
     std::vector<std::thread> threads;
-    for (int i = 0; i < 10; ++i) {
+    for (int i = 0; i < 10; ++i)
+    {
         threads.push_back(std::thread(logTask, i));
     }
 
     // Wait for all threads to complete
-    for (auto& t : threads) {
+    for (auto &t : threads)
+    {
         t.join();
     }
 
     std::cout << "Thread safety test completed." << std::endl;
 }
 
-void logToDifferentStreamsTest() {
+void logToDifferentStreamsTest()
+{
     std::cout << "Testing log output to stdout and stderr..." << std::endl;
 
     // Log to stdout
@@ -85,7 +90,8 @@ void logToDifferentStreamsTest() {
     std::cout << "Log output test completed." << std::endl;
 }
 
-void runLogLevelFilteringTests() {
+void runLogLevelFilteringTests()
+{
     std::cout << "Testing log level filtering..." << std::endl;
 
     // Set log level to DEBUG (lowest level)
@@ -141,7 +147,8 @@ void runLogLevelFilteringTests() {
     std::cout << "Log level filtering tests completed." << std::endl;
 }
 
-void messageFormattingTest() {
+void messageFormattingTest()
+{
     std::cout << "Testing message formatting..." << std::endl;
 
     // Set log level to DEBUG (lowest level)
@@ -157,63 +164,66 @@ void messageFormattingTest() {
     std::cout << "Message formatting test completed." << std::endl;
 }
 
-void crushTestViaLog() {
+void crushTestViaLog()
+{
     std::cout << "Testing crush function via log..." << std::endl;
 
     // Test case 1: String with leading and trailing spaces
     std::string testStr1 = "   Hello World   ";
     llog.logS(INFO, "Test 1: String with leading and trailing spaces");
-    llog.logS(INFO, testStr1);  // This should automatically be cleaned by crush
+    llog.logS(INFO, testStr1); // This should automatically be cleaned by crush
 
     // Test case 2: String with multiple spaces between words
     std::string testStr2 = "Hello    World";
     llog.logS(INFO, "Test 2: String with multiple spaces between words");
-    llog.logS(INFO, testStr2);  // This should automatically be cleaned by crush
+    llog.logS(INFO, testStr2); // This should automatically be cleaned by crush
 
     // Test case 3: String with spaces before punctuation
     std::string testStr3 = "Hello  , World";
     llog.logS(INFO, "Test 3: String with spaces before punctuation");
-    llog.logS(INFO, testStr3);  // This should automatically be cleaned by crush
+    llog.logS(INFO, testStr3); // This should automatically be cleaned by crush
 
     // Test case 4: String with spaces inside parentheses
     std::string testStr4 = "Hello (   World   )";
     llog.logS(INFO, "Test 4: String with spaces inside parentheses");
-    llog.logS(INFO, testStr4);  // This should automatically be cleaned by crush
+    llog.logS(INFO, testStr4); // This should automatically be cleaned by crush
 
     // Test case 5: String with multiple spaces and tabs
     std::string testStr5 = "   This    is   \t\ttest   ";
     llog.logS(INFO, "Test 5: String with multiple spaces and tabs");
-    llog.logS(INFO, testStr5);  // This should automatically be cleaned by crush
+    llog.logS(INFO, testStr5); // This should automatically be cleaned by crush
 
     // Test case 6: Empty string
     std::string testStr6 = "";
     llog.logS(INFO, "Test 6: Empty string");
-    llog.logS(INFO, testStr6);  // This should be an empty line in the logs
+    llog.logS(INFO, testStr6); // This should be an empty line in the logs
 
     // Test case 7: String with only one word
     std::string testStr7 = "   Hello   ";
     llog.logS(INFO, "Test 7: String with only one word");
-    llog.logS(INFO, testStr7);  // This should automatically be cleaned by crush
+    llog.logS(INFO, testStr7); // This should automatically be cleaned by crush
 
     std::cout << "crush function via log test completed." << std::endl;
 }
 
-void multiLineLogTest() {
+void multiLineLogTest()
+{
     std::cout << "Testing multiline function via log..." << std::endl;
 
     // Test case 1: String with leading and trailing spaces
     std::string testStr1 = "Line 1\nLine 2";
     llog.logS(INFO, "Testing: String with a linefeed");
-    llog.logS(INFO, testStr1);  // This should automatically be split
+    llog.logS(INFO, testStr1); // This should automatically be split
 
     std::cout << "Line split function via log test completed." << std::endl;
 }
 
-void longTest() {
+void longTest()
+{
     llog.enableTimestamps(false);
-    llog.logS(INFO, FATAL, "Logging at DEBUG level");
     llog.setLogLevel(DEBUG);
-    std::cout << std::endl << "Testing standard out." << std::endl;
+    std::cout << std::endl
+              << "Testing stdout." << std::endl;
     llog.logS(INFO, 100);
     llog.logS(INFO, 100.01);
     llog.logS(INFO, "\t\t\t\t\t\tFoo");
@@ -223,7 +233,8 @@ void longTest() {
     llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
 
     llog.enableTimestamps(true);
-    std::cout << std::endl << "Testing standard out with stamps." << std::endl;
+    std::cout << std::endl
+              << "Testing stdout with timestamps." << std::endl;
     llog.logS(INFO, 100);
     llog.logS(INFO, 100.01);
     llog.logS(INFO, "\t\t\t\t\t\tFoo");
@@ -233,34 +244,36 @@ void longTest() {
     llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
 
     llog.enableTimestamps(false);
-    std::cerr << std::endl << "Testing standard error." << std::endl;
-    llog.logS(INFO, 100);
-    llog.logS(INFO, 100.01);
-    llog.logS(INFO, "\t\t\t\t\t\tFoo");
-    llog.logS(INFO, "Foo", " foo foo.");
-    llog.logS(INFO, "Foo", " \t\t\t\t\t\t\t\t\tfoo foo.");
-    llog.logS(INFO, "Foo ", 100, " \t\t\t\t\t\t\t\t\tfoo foo.");
-    llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
+    std::cerr << std::endl
+              << "Testing stderr." << std::endl;
+    llog.logE(INFO, 100);
+    llog.logE(INFO, 100.01);
+    llog.logE(INFO, "\t\t\t\t\t\tFoo");
+    llog.logE(INFO, "Foo", " foo foo.");
+    llog.logE(INFO, "Foo", " \t\t\t\t\t\t\t\t\tfoo foo.");
+    llog.logE(INFO, "Foo ", 100, " \t\t\t\t\t\t\t\t\tfoo foo.");
+    llog.logE(INFO, "Multiline ", 100.01, " \nNew line.");
 
     llog.enableTimestamps(true);
-    std::cerr << std::endl << "Testing standard error." << std::endl;
-    llog.logS(INFO, 100);
-    llog.logS(INFO, 100.01);
-    llog.logS(INFO, "\t\t\t\t\t\tFoo");
-    llog.logS(INFO, "Foo", " foo foo.");
-    llog.logS(INFO, "Foo", " \t\t\t\t\t\t\t\t\tfoo foo.");
-    llog.logS(INFO, "Foo ", 100, " \t\t\t\t\t\t\t\t\tfoo foo.");
-    llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
+    std::cerr << std::endl
+              << "Testing stderr with timestamps." << std::endl;
+    llog.logE(INFO, 100);
+    llog.logE(INFO, 100.01);
+    llog.logE(INFO, "\t\t\t\t\t\tFoo");
+    llog.logE(INFO, "Foo", " foo foo.");
+    llog.logE(INFO, "Foo", " \t\t\t\t\t\t\t\t\tfoo foo.");
+    llog.logE(INFO, "Foo ", 100, " \t\t\t\t\t\t\t\t\tfoo foo.");
+    llog.logE(INFO, "Multiline ", 100.01, " \nNew line.");
 }
 
-int main() {
+int main()
+{
     // threadSafetyTest();
     // logToDifferentStreamsTest();
     // crushTestViaLog();
     // multiLineLogTest();
     // messageFormattingTest();
-    runLogLevelFilteringTests();
-    //longTest();
+    // runLogLevelFilteringTests();
+    longTest();
     return 0;
 }
-#endif

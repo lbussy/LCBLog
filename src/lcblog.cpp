@@ -44,14 +44,22 @@
  * @param level The log level to convert.
  * @return A string representing the log level.
  */
-std::string logLevelToString(LogLevel level) {
-    switch (level) {
-        case DEBUG: return "DEBUG";
-        case INFO: return "INFO";
-        case WARN: return "WARN";
-        case ERROR: return "ERROR";
-        case FATAL: return "FATAL";
-        default: return "UNKNOWN";
+std::string logLevelToString(LogLevel level)
+{
+    switch (level)
+    {
+    case DEBUG:
+        return "DEBUG";
+    case INFO:
+        return "INFO";
+    case WARN:
+        return "WARN";
+    case ERROR:
+        return "ERROR";
+    case FATAL:
+        return "FATAL";
+    default:
+        return "UNKNOWN";
     }
 }
 
@@ -61,7 +69,7 @@ std::string logLevelToString(LogLevel level) {
  * @param outStream The output stream for standard logs (default: std::cout).
  * @param errStream The output stream for error logs (default: std::cerr).
  */
-LCBLog::LCBLog(std::ostream& outStream, std::ostream& errStream)
+LCBLog::LCBLog(std::ostream &outStream, std::ostream &errStream)
     : logLevel(INFO), out(outStream), err(errStream) {}
 
 /**
@@ -69,13 +77,14 @@ LCBLog::LCBLog(std::ostream& outStream, std::ostream& errStream)
  *
  * @param level The log level to set.
  */
-void LCBLog::setLogLevel(LogLevel level) {
+void LCBLog::setLogLevel(LogLevel level)
+{
     {
         std::lock_guard<std::mutex> lock(logMutex);
         logLevel = level;
     }
 
-    logS(INFO, "Log level changed to:", logLevelToString(level));
+    logS(level, "Log level changed to:", logLevelToString(level));
 }
 
 /**
@@ -83,7 +92,8 @@ void LCBLog::setLogLevel(LogLevel level) {
  *
  * @param enable If true, timestamps will be included in logs.
  */
-void LCBLog::enableTimestamps(bool enable) {
+void LCBLog::enableTimestamps(bool enable)
+{
     std::lock_guard<std::mutex> lock(logMutex);
     printTimestamps = enable;
 }
@@ -94,7 +104,8 @@ void LCBLog::enableTimestamps(bool enable) {
  * @param level The log level to check.
  * @return True if the message should be logged, otherwise false.
  */
-bool LCBLog::shouldLog(LogLevel level) const {
+bool LCBLog::shouldLog(LogLevel level) const
+{
     return level >= logLevel;
 }
 
@@ -103,7 +114,8 @@ bool LCBLog::shouldLog(LogLevel level) const {
  *
  * @return A formatted timestamp string.
  */
-std::string LCBLog::getStamp() {
+std::string LCBLog::getStamp()
+{
     char dts[24];
     time_t t = time(nullptr);
     struct tm tm;
@@ -117,34 +129,39 @@ std::string LCBLog::getStamp() {
  *
  * @param s The string to sanitize.
  */
-void LCBLog::crush(std::string& s) {
+void LCBLog::crush(std::string &s)
+{
     // Trim leading whitespace
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }));
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch)
+                                    { return !std::isspace(ch); }));
 
     // Trim trailing whitespace
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch) {
-        return !std::isspace(ch);
-    }).base(), s.end());
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch)
+                         { return !std::isspace(ch); })
+                .base(),
+            s.end());
 
     // Reduce multiple spaces to a single space
-    s.erase(std::unique(s.begin(), s.end(), [](char a, char b) {
-        return std::isspace(a) && std::isspace(b);
-    }), s.end());
+    s.erase(std::unique(s.begin(), s.end(), [](char a, char b)
+                        { return std::isspace(a) && std::isspace(b); }),
+            s.end());
 
     // Remove spaces immediately after '(' and before ')'
-    auto removeSpaceBefore = [](std::string& str, const std::string& pattern) {
+    auto removeSpaceBefore = [](std::string &str, const std::string &pattern)
+    {
         size_t pos = 0;
-        while ((pos = str.find(pattern, pos)) != std::string::npos) {
+        while ((pos = str.find(pattern, pos)) != std::string::npos)
+        {
             str.erase(pos + 1, str.find_first_not_of(" ", pos + 1) - (pos + 1));
             pos += 1;
         }
     };
 
-    auto removeSpaceAfter = [](std::string& str, const std::string& pattern) {
+    auto removeSpaceAfter = [](std::string &str, const std::string &pattern)
+    {
         size_t pos = 0;
-        while ((pos = str.find(pattern, pos)) != std::string::npos) {
+        while ((pos = str.find(pattern, pos)) != std::string::npos)
+        {
             size_t start = str.find_last_not_of(" ", pos - 1);
             str.erase(start + 1, pos - start - 1);
             pos = start + 1;
@@ -153,4 +170,34 @@ void LCBLog::crush(std::string& s) {
 
     removeSpaceAfter(s, ")");
     removeSpaceBefore(s, "(");
+}
+
+/**
+ * @namespace (anonymous)
+ * @brief Prevents unused function warnings by ensuring functions are referenced.
+ *
+ * This anonymous namespace contains a workaround to prevent `cppcheck`
+ * from flagging certain functions as unused when they are intentionally
+ * not directly called in the current translation unit.
+ */
+namespace
+{
+
+    /**
+     * @brief Suppresses unused function warnings.
+     *
+     * @note This function is never intended to be executed, only referenced.
+     */
+    void suppress_unused_warnings()
+    {
+        (void)&LCBLog::setLogLevel;      ///< Explicitly reference function
+        (void)&LCBLog::enableTimestamps; ///< Explicitly reference function
+    }
+
+    /**
+     * @brief Forces `suppress_unused_warnings()` to be referenced.
+     *
+     * @note The variable is never actually used at runtime, ensuring zero impact.
+     */
+    static const auto _suppress = (suppress_unused_warnings(), 0);
 }
