@@ -34,11 +34,6 @@ SRC         = $(NAME).cpp
 OBJ         = $(SRC:.cpp=.o)
 DEP         = $(OBJ:.o=.d)
 
-# Test-specific files
-TEST_SRC    = main.cpp
-TEST_OBJ    = $(TEST_SRC:.cpp=.o)
-TEST_DEP    = $(TEST_SRC:.cpp=.d)
-
 # Ensure parallel compilation
 MAKEFLAGS += -j$(shell nproc)
 
@@ -53,11 +48,9 @@ $(LIB_NAME): $(OBJ)
 clean_logs:
 	$(RM) $(TEST_LOGS)
 
-# Build the test executable
-test: $(TEST_NAME)
-
-$(TEST_NAME): clean_logs $(OBJ) $(TEST_OBJ)
-	$(CXX) $(CXXFLAGS) $(OBJ) $(TEST_OBJ) -o $(TEST_NAME) $(LDLIBS)
+# Build the test executable (Only compiles main.cpp here)
+test: clean_logs $(OBJ)
+	$(CXX) $(CXXFLAGS) main.cpp $(OBJ) -o $(TEST_NAME) $(LDLIBS)
 
 # Compile source files into object files
 %.o: %.cpp
@@ -65,11 +58,10 @@ $(TEST_NAME): clean_logs $(OBJ) $(TEST_OBJ)
 
 # Clean up build artifacts
 clean:
-	-$(RM) $(OBJ) $(TEST_OBJ) $(DEP) $(TEST_DEP) $(LIB_NAME) $(TEST_NAME) $(TEST_LOGS)
+	-$(RM) $(OBJ) $(DEP) $(LIB_NAME) $(TEST_NAME) $(TEST_LOGS)
 
 # Include dependency files
 -include $(DEP)
--include $(TEST_DEP)
 
 # Debug build: compiles the library with debug flags enabled
 debug: clean
@@ -86,7 +78,7 @@ lint:
 	    echo "  choco install cppcheck      # Windows (Chocolatey)"; \
 	    exit 1; \
 	}
-	cppcheck --enable=all --inconclusive --max-configs=100 --std=c++17 --language=c++ $(SRC) $(TEST_SRC) --suppress=missingIncludeSystem
+	cppcheck --enable=all --inconclusive --max-configs=100 --std=c++17 --language=c++ $(SRC) --suppress=missingIncludeSystem
 
 # Help target: displays available make targets and their descriptions
 help:
