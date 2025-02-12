@@ -84,7 +84,7 @@ void LCBLog::setLogLevel(LogLevel level)
         logLevel = level;
     }
 
-    logS(level, "Log level changed to:", logLevelToString(level));
+    // logS(level, "Log level changed to: ", logLevelToString(level));
 }
 
 /**
