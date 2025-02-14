@@ -266,6 +266,38 @@ void longTest()
     llog.logE(INFO, "Multiline ", 100.01, " \nNew line.");
 }
 
+void testShouldSkipSpace() {
+    std::cout << "Running shouldSkipSpace() tests...\n";
+
+    // Test cases for punctuation handling
+    assert(shouldSkipSpace("Word", ".") == true);    // No space before `.`
+    assert(shouldSkipSpace("Word", ",") == true);    // No space before `,`
+    assert(shouldSkipSpace("Word", "!") == true);    // No space before `!`
+    assert(shouldSkipSpace("Word", ";") == true);    // No space before `;`
+
+    assert(shouldSkipSpace(":", "Word") == false);   // Space after `:`
+    assert(shouldSkipSpace(".", "Word") == false);   // Space after `.`
+    assert(shouldSkipSpace(",", "Word") == false);   // Space after `,`
+    assert(shouldSkipSpace(";", "Word") == false);   // Space after `;`
+
+    // Test with mixed types
+    assert(shouldSkipSpace(42, "Word") == false);    // int should not break it
+    assert(shouldSkipSpace(3.14, "Word") == false);  // double should not break it
+    assert(shouldSkipSpace("Word", 100) == false);   // No space impact for int
+    assert(shouldSkipSpace("Word", 2.71) == false);  // No space impact for double
+
+    // Edge cases
+    assert(shouldSkipSpace("", ".") == true);        // Empty string before `.`
+    assert(shouldSkipSpace("", ",") == true);        // Empty string before `,`
+    assert(shouldSkipSpace("", "!") == true);        // Empty string before `!`
+    assert(shouldSkipSpace("", ";") == true);        // Empty string before `;`
+
+    assert(shouldSkipSpace("", "Word") == false);    // Empty before word (allow space)
+    assert(shouldSkipSpace(":", "") == false);       // Space after `:` even if empty
+
+    std::cout << "All shouldSkipSpace() tests passed successfully!\n";
+}
+
 int main()
 {
     // threadSafetyTest();
@@ -274,6 +306,7 @@ int main()
     // multiLineLogTest();
     // messageFormattingTest();
     // runLogLevelFilteringTests();
-    longTest();
+    // longTest();
+    testShouldSkipSpace();
     return 0;
 }

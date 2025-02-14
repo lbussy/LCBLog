@@ -52,6 +52,8 @@ clean_logs:
 # Build the test executable (Only compiles main.cpp here)
 test: clean_logs $(OBJ)
 	$(CXX) $(CXXFLAGS) main.cpp $(OBJ) -o $(TEST_NAME) $(LDLIBS)
+	@echo "Running LCBLog test mode."
+	$(Q)sudo ./$(TEST_NAME)
 
 # Compile source files into object files
 %.o: %.cpp

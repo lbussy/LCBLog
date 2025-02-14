@@ -185,6 +185,18 @@ private:
     std::string getStamp();
 };
 
+/**
+ * @brief Determines if a space should be adjusted around a given argument.
+ *
+ * Ensures correct spacing after colons and prevents spaces before punctuation.
+ *
+ * @param prevArg The previous argument (for trailing spaces check).
+ * @param arg The current argument.
+ * @return True if no space should be added before `arg`, false if space is needed.
+ */
+template <typename PrevT, typename T>
+bool shouldSkipSpace(const PrevT& prevArg, const T& arg);
+
 #include "lcblog.tpp"
 
 #endif // LCBLOG_HPP
