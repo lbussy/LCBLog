@@ -74,38 +74,14 @@ void LCBLog::logToStream(std::ostream& stream, LogLevel level, T t, Args... args
     std::ostringstream oss;
     oss << t;  // First argument is directly added
 
+    // Append additional arguments while handling spacing correctly
     if constexpr (sizeof...(args) > 0) {
-        auto shouldSkipSpace = [](const auto& arg, const auto& prevArg) -> bool {
-            std::string strArg = std::string(arg); // Ensure arg is a string
-
-            // Only attempt to convert `prevArg` if it's a valid string type
-            std::string prevStr;
-            if constexpr (std::is_convertible_v<decltype(prevArg), std::string>) {
-                prevStr = std::string(prevArg);
-            } else {
-                prevStr = "";  // Default to empty string if conversion is not possible
-            }
-
-            // Skip space before certain punctuation
-            if (strArg.size() == 1 && (strArg == "." || strArg == "," || strArg == ";" || strArg == ":")) {
-                return true;
-            }
-
-            // Skip space before `")"` only if `prevStr` is exactly one space
-            if (strArg == ")" && prevStr == " ") {
-                return true;
-            }
-
-            return false;
+        const auto appendArgs = [&](const auto& prev, const auto& first, const auto&... rest) {
+            oss << (shouldSkipSpace(prev, first) ? "" : " ") << first;
+            ((oss << (shouldSkipSpace(first, rest) ? "" : " ") << rest), ...);
         };
 
-        if constexpr (sizeof...(args) > 0) {
-            const auto appendArgs = [&](const auto& first, const auto&... rest) {
-                oss << first;  // First argument is directly added
-                ((shouldSkipSpace(rest, first) ? oss << rest : oss << " " << rest), ...);
-            };
-            appendArgs(args...);
-        }
+        appendArgs(t, args...);
     }
 
     std::string logMessage = oss.str();
@@ -113,9 +89,9 @@ void LCBLog::logToStream(std::ostream& stream, LogLevel level, T t, Args... args
     std::string line;
     bool firstLine = true;
 
-    constexpr int LOG_LEVEL_WIDTH = 5; // Maximum length of log level names (DEBUG, ERROR, FATAL = 5)
+    constexpr int LOG_LEVEL_WIDTH = 5;  // Maximum length of log level names (DEBUG, ERROR, FATAL = 5)
     std::string levelStr = logLevelToString(level);
-    levelStr.append(LOG_LEVEL_WIDTH - levelStr.size(), ' '); // Pad to align all levels
+    levelStr.append(LOG_LEVEL_WIDTH - levelStr.size(), ' ');  // Pad to align all levels
 
     while (std::getline(messageStream, line)) {
         if (!firstLine) stream << std::endl;
@@ -127,4 +103,41 @@ void LCBLog::logToStream(std::ostream& stream, LogLevel level, T t, Args... args
         firstLine = false;
     }
     stream << std::endl;
+}
+
+/**
+ * @brief Determines if a space should be adjusted around a given argument.
+ *
+ * Ensures correct spacing after colons and prevents spaces before punctuation.
+ *
+ * @param prevArg The previous argument (for trailing spaces check).
+ * @param arg The current argument.
+ * @return True if no space should be added before `arg`, false if space is needed.
+ */
+template <typename PrevT, typename T>
+bool shouldSkipSpace(const PrevT& prevArg, const T& arg) {
+    std::string prevStr;
+    std::string argStr;
+
+    // Convert previous argument to string (if possible)
+    if constexpr (std::is_convertible_v<PrevT, std::string>) {
+        prevStr = std::string(prevArg);
+    }
+
+    // Convert current argument to string (if possible)
+    if constexpr (std::is_convertible_v<T, std::string>) {
+        argStr = std::string(arg);
+    }
+
+    // Remove space *before* punctuation marks
+    if (argStr.size() == 1 && (argStr == "." || argStr == "," || argStr == ";" || argStr == "!")) {
+        return true;
+    }
+
+    // Ensure a space *after* colons, periods, commas, and semicolons (but only if prevArg is a string)
+    if (!prevStr.empty() && (prevStr == ":" || prevStr == "." || prevStr == "," || prevStr == ";")) {
+        return false;  // Forces a space after punctuation
+    }
+
+    return false;
 }
