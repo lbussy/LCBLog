@@ -317,7 +317,9 @@ void testMixedDataTypes() {
 
 void testParentheses() {
     llog.setLogLevel(DEBUG);
-    llog.logS(INFO, "Testing", "(", 0.0, ")");
+    llog.logS(INFO, "Testing1", "(", 0.0, ")");
+    llog.logS(INFO, "Testing2", "(", 0.0, ").");
+    llog.logS(INFO, "Testing3 (", 0.0, ")");
 }
 
 int main()

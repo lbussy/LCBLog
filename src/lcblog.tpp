@@ -114,15 +114,6 @@ void LCBLog::logToStream(std::ostream& stream, LogLevel level, T t, Args... args
  * @param arg The current argument.
  * @return True if no space should be added before `arg`, false if space is needed.
  */
-/**
- * @brief Determines if a space should be adjusted around a given argument.
- *
- * Ensures correct spacing after colons and prevents spaces before punctuation.
- *
- * @param prevArg The previous argument (for trailing spaces check).
- * @param arg The current argument.
- * @return True if no space should be added before `arg`, false if space is needed.
- */
 template <typename PrevT, typename T>
 bool shouldSkipSpace(const PrevT& prevArg, const T& arg) {
     std::string prevStr;
@@ -144,12 +135,10 @@ bool shouldSkipSpace(const PrevT& prevArg, const T& arg) {
         return true;  // No space before these characters
     }
 
-    // Prevent a space *after* `(` by checking previous argument
-    if (prevStr == "(" || prevStr == "[" || prevStr == "{") {
+    // Prevent a space *after* `(`, `[` or `{` by checking the last character of prevStr
+    if (!prevStr.empty() && (prevStr.back() == '(' || prevStr.back() == '[' || prevStr.back() == '{')) {
         return true;  // No space after opening parenthesis
     }
 
     return false;
 }
-
-
