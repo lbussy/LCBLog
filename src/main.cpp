@@ -298,6 +298,28 @@ void testShouldSkipSpace() {
     std::cout << "All shouldSkipSpace() tests passed successfully!\n";
 }
 
+void testMixedDataTypes() {
+    std::cout << "Running testMixedDataTypes()...\n";
+
+    llog.logS(INFO, "Test start:", 42, "is an int,", 3.14159, "is Pi,", -7.25,
+              "is negative,", "true", "is a bool,", nullptr, "is null,",
+              "this", "should", "have", "spaces.", "(Parentheses)",
+              "[Brackets]", "{Braces}", "\"Quotes\"", "'Single quotes'",
+              "Comma,", "period.", "exclamation!", "question?", "colon:",
+              "semicolon;", "hyphen-", "underscore_", "slash/", "backslash\\",
+              "percent%", "ampersand&", "asterisk*", "at@", "hash#", "dollar$",
+              "caret^", "pipe|", "tilde~", "backtick`");
+
+    llog.logS(INFO, "Transmission completed,", "(", 0.000, "sec", ")");
+
+    std::cout << "Completed testMixedDataTypes(). Check log output.\n";
+}
+
+void testParentheses() {
+    llog.setLogLevel(DEBUG);
+    llog.logS(INFO, "Testing", "(", 0.0, ")");
+}
+
 int main()
 {
     // threadSafetyTest();
@@ -307,6 +329,8 @@ int main()
     // messageFormattingTest();
     // runLogLevelFilteringTests();
     // longTest();
-    testShouldSkipSpace();
+    // testShouldSkipSpace();
+    //testMixedDataTypes();
+    testParentheses();
     return 0;
 }
