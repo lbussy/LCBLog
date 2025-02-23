@@ -103,6 +103,7 @@ void LCBLog::logToStream(std::ostream& stream, LogLevel level, T t, Args... args
         firstLine = false;
     }
     stream << std::endl;
+    stream.flush();
 }
 
 /**
