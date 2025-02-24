@@ -73,7 +73,6 @@ LCBLog::LCBLog(std::ostream &outStream, std::ostream &errStream)
     : logLevel(INFO), out(outStream), err(errStream) {
     out << std::unitbuf;  // Ensure immediate flushing
     err << std::unitbuf;
-    logS(INFO, "LCBLog initialized successfully.");
 }
 
 /**
