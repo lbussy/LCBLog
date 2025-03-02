@@ -70,8 +70,9 @@ std::string logLevelToString(LogLevel level)
  * @param errStream The output stream for error logs (default: std::cerr).
  */
 LCBLog::LCBLog(std::ostream &outStream, std::ostream &errStream)
-    : logLevel(INFO), out(outStream), err(errStream) {
-    out << std::unitbuf;  // Ensure immediate flushing
+    : logLevel(INFO), out(outStream), err(errStream)
+{
+    out << std::unitbuf; // Ensure immediate flushing
     err << std::unitbuf;
 }
 

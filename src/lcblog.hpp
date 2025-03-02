@@ -195,7 +195,7 @@ private:
  * @return True if no space should be added before `arg`, false if space is needed.
  */
 template <typename PrevT, typename T>
-bool shouldSkipSpace(const PrevT& prevArg, const T& arg);
+bool shouldSkipSpace(const PrevT &prevArg, const T &arg);
 
 #include "lcblog.tpp"
 

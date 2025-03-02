@@ -49,11 +49,19 @@
  * @param args Additional message content.
  */
 template <typename T, typename... Args>
-void LCBLog::log(LogLevel level, std::ostream& stream, T t, Args... args) {
+void LCBLog::log(LogLevel level, std::ostream& stream, T t, Args... args)
+{
     if (!shouldLog(level)) return;
 
-    std::lock_guard<std::mutex> lock(logMutex);
-    logToStream(stream, level, t, args...);
+    // Format the log message first (reduces time holding the lock)
+    std::ostringstream formattedStream;
+    logToStream(formattedStream, level, t, args...);
+
+    {
+        // Lock only while writing to the actual output stream
+        std::lock_guard<std::mutex> lock(logMutex);
+        stream << formattedStream.str();
+    }
 }
 
 /**
