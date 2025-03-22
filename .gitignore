@@ -2,7 +2,8 @@
 *.err
 *.log
 *.bak
-lcblog_test
+lcblog*
+*_test
 build/
 
 # Prerequisites
