@@ -3,6 +3,7 @@
 *.log
 *.bak
 lcblog_test
+build/
 
 # Prerequisites
 *.d

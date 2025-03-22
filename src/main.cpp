@@ -266,39 +266,41 @@ void longTest()
     llog.logE(INFO, "Multiline ", 100.01, " \nNew line.");
 }
 
-void testShouldSkipSpace() {
+void testShouldSkipSpace()
+{
     std::cout << "Running shouldSkipSpace() tests...\n";
 
     // Test cases for punctuation handling
-    assert(shouldSkipSpace("Word", ".") == true);    // No space before `.`
-    assert(shouldSkipSpace("Word", ",") == true);    // No space before `,`
-    assert(shouldSkipSpace("Word", "!") == true);    // No space before `!`
-    assert(shouldSkipSpace("Word", ";") == true);    // No space before `;`
+    assert(shouldSkipSpace("Word", ".") == true); // No space before `.`
+    assert(shouldSkipSpace("Word", ",") == true); // No space before `,`
+    assert(shouldSkipSpace("Word", "!") == true); // No space before `!`
+    assert(shouldSkipSpace("Word", ";") == true); // No space before `;`
 
-    assert(shouldSkipSpace(":", "Word") == false);   // Space after `:`
-    assert(shouldSkipSpace(".", "Word") == false);   // Space after `.`
-    assert(shouldSkipSpace(",", "Word") == false);   // Space after `,`
-    assert(shouldSkipSpace(";", "Word") == false);   // Space after `;`
+    assert(shouldSkipSpace(":", "Word") == false); // Space after `:`
+    assert(shouldSkipSpace(".", "Word") == false); // Space after `.`
+    assert(shouldSkipSpace(",", "Word") == false); // Space after `,`
+    assert(shouldSkipSpace(";", "Word") == false); // Space after `;`
 
     // Test with mixed types
-    assert(shouldSkipSpace(42, "Word") == false);    // int should not break it
-    assert(shouldSkipSpace(3.14, "Word") == false);  // double should not break it
-    assert(shouldSkipSpace("Word", 100) == false);   // No space impact for int
-    assert(shouldSkipSpace("Word", 2.71) == false);  // No space impact for double
+    assert(shouldSkipSpace(42, "Word") == false);   // int should not break it
+    assert(shouldSkipSpace(3.14, "Word") == false); // double should not break it
+    assert(shouldSkipSpace("Word", 100) == false);  // No space impact for int
+    assert(shouldSkipSpace("Word", 2.71) == false); // No space impact for double
 
     // Edge cases
-    assert(shouldSkipSpace("", ".") == true);        // Empty string before `.`
-    assert(shouldSkipSpace("", ",") == true);        // Empty string before `,`
-    assert(shouldSkipSpace("", "!") == true);        // Empty string before `!`
-    assert(shouldSkipSpace("", ";") == true);        // Empty string before `;`
+    assert(shouldSkipSpace("", ".") == true); // Empty string before `.`
+    assert(shouldSkipSpace("", ",") == true); // Empty string before `,`
+    assert(shouldSkipSpace("", "!") == true); // Empty string before `!`
+    assert(shouldSkipSpace("", ";") == true); // Empty string before `;`
 
-    assert(shouldSkipSpace("", "Word") == false);    // Empty before word (allow space)
-    assert(shouldSkipSpace(":", "") == false);       // Space after `:` even if empty
+    assert(shouldSkipSpace("", "Word") == false); // Empty before word (allow space)
+    assert(shouldSkipSpace(":", "") == false);    // Space after `:` even if empty
 
     std::cout << "All shouldSkipSpace() tests passed successfully!\n";
 }
 
-void testMixedDataTypes() {
+void testMixedDataTypes()
+{
     std::cout << "Running testMixedDataTypes()...\n";
 
     llog.logS(INFO, "Test start:", 42, "is an int,", 3.14159, "is Pi,", -7.25,
@@ -315,7 +317,8 @@ void testMixedDataTypes() {
     std::cout << "Completed testMixedDataTypes(). Check log output.\n";
 }
 
-void testParentheses() {
+void testParentheses()
+{
     llog.setLogLevel(DEBUG);
     llog.logS(INFO, "Testing1", "(", 0.0, ")");
     llog.logS(INFO, "Testing2", "(", 0.0, ").");
@@ -324,7 +327,7 @@ void testParentheses() {
 
 int main()
 {
-    // threadSafetyTest();
+    threadSafetyTest();
     // logToDifferentStreamsTest();
     // crushTestViaLog();
     // multiLineLogTest();
@@ -332,7 +335,7 @@ int main()
     // runLogLevelFilteringTests();
     // longTest();
     // testShouldSkipSpace();
-    //testMixedDataTypes();
-    testParentheses();
+    // testMixedDataTypes();
+    // testParentheses();
     return 0;
 }

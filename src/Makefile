@@ -1,96 +1,204 @@
-# -----------------------------------------------------------------------------
-# @file Makefile
-# @brief Build system for the lcblog library and associated tests.
+# Makefile for building most C++ or C++ and C projects
+
+# C++ Version
+CXXVER := 17
+# Prefix for tests, "sudo" if required
+SUDO := #sudo
+# Debug tag
+# DEBUG := -DDEBUG_TCP_SERVER
+
+# Get project name from Git
 #
-# This Makefile automates the process of building the lcblog static library, 
-# compiling the test executable with debug flags enabled, and running static 
-# code analysis using cppcheck.
+# Project name from remote origin URL (fallback to 'unknown' if not available)
+PRJ := $(shell git config --local remote.origin.url 2>/dev/null | sed -n 's#.*/\([^.]*\)\.git#\1#p')
+# If PRJ is empty, fallback to current directory name
+PRJ := $(or $(PRJ),$(shell basename $$(pwd)))
+# If PRJ is "src", use the parent directory name
+PRJ := $(shell [ "$(PRJ)" = "src" ] && basename $$(dirname $$(pwd)) || echo "$(PRJ)")
+# Convert PRJ to lowercase for EXE_NAME
+EXE_NAME := $(shell echo $(PRJ) | tr '[:upper:]' '[:lower:]')
+
+# Output Items
+OUT := $(EXE_NAME)					# Normal release binary
+TEST_OUT :=	$(EXE_NAME)_test		# Debug/test binary
+# Strip whitespace from comments
+OUT := $(strip $(OUT))
+TEST_OUT := $(strip $(TEST_OUT))
+
+# Output directories
+OBJ_DIR_RELEASE = build/obj/release
+OBJ_DIR_DEBUG   = build/obj/debug
+DEP_DIR         = build/dep
+BIN_DIR		 	= build/bin
+
+# Collect source files
+C_SOURCES   := $(shell find . -name "*.c")
+CPP_SOURCES := $(shell find . -name "*.cpp" ! -path "./*/main.cpp")
+
+# Collect object files
+C_OBJECTS   := $(patsubst %.c,$(OBJ_DIR_RELEASE)/%.o,$(C_SOURCES))
+CPP_OBJECTS := $(patsubst %.cpp,$(OBJ_DIR_RELEASE)/%.o,$(CPP_SOURCES))
+
+# Linker Flags
+LDFLAGS := -lpthread  -latomic
+# Get packages for linker from PKG_CONFIG_PATH
+# LDFLAGS += $(shell pkg-config --cflags --libs libgpiod)
+LDFLAGS += $(shell pkg-config --libs libgpiodcxx)
+
+# Collect dependency files
+DEPFILES := $(wildcard $(DEP_DIR)/**/*.d)
+# Include dependencies if they exist
+-include $(DEPFILES)
+
+# Compiler Executables
+CXX = g++
+CC = gcc
+
+# Allow threading using all available processors
+MAKEFLAGS := -j$(nproc)
+
+# Compiler Flags
 #
-# @targets
-# - `all`: Builds the static library `liblcblog.a`.
-# - `test`: Builds the test executable `lcblog_test` with debug flags enabled.
-# - `debug`: Builds the static library with debugging symbols enabled.
-# - `lint`: Runs cppcheck for static code analysis on the source files.
-# - `clean`: Cleans up build artifacts (object files, library, test executable).
-# - `help`: Displays available make targets and their descriptions.
-# -----------------------------------------------------------------------------
- 
-# Target names
-NAME        = lcblog
-LIB_NAME    = lib$(NAME).a
-TEST_NAME   = $(NAME)_test
-TEST_LOGS   = test_log.*
+# Common flags for both C and C++ compilers
+COMMON_FLAGS := -Wall -Werror -fmax-errors=10 -MMD -MP
 
-# Compiler settings
-CXX         = g++
-CXXFLAGS    += -Wall -Werror -fmax-errors=5
-CXXFLAGS    += -Wno-psabi -std=c++17 -MMD -MP
+# C Flags
+CFLAGS := $(COMMON_FLAGS)
+# C Debug Flags
+C_DEBUG_FLAGS := $(CFLAGS) -g -DDEBUG_PPMMANAGER	# Debug flags
+# C Release Flags
+C_RELEASE_FLAGS := $(CFLAGS) -O2					# Release optimized
 
-# Linker flags (if needed)
-LDLIBS      = 
+# C++ Flags
+CXXFLAGS := -Wno-psabi -lstdc++fs -std=c++$(CXXVER)
+CXXFLAGS += $(COMMON_FLAGS) $(COMM_CXX_FLAGS)
+# C++ Debug Flags
+CXX_DEBUG_FLAGS := $(CXXFLAGS) -g $(DEBUG)	# Debug flags
+# C++ Release Flags
+CXX_RELEASE_FLAGS := $(CXXFLAGS) -O2		# Release optimized
 
-# Source files
-SRC         = $(NAME).cpp
-OBJ         = $(SRC:.cpp=.o)
-TEST_DEP 	= $(TEST_NAME).d
-DEP 		= $(OBJ:.o=.d) $(TEST_DEP)
+# Include paths for libraries
+# CXXFLAGS += -I$(abspath ./{folder}/src)
 
-# Ensure parallel compilation
-MAKEFLAGS += -j$(shell nproc)
+# Define additional macros for the compiler
+# CXXFLAGS += -DXXX
 
-# Default build target: creates the static library
-all: $(LIB_NAME)
+# Strip whitespaces
+C_DEBUG_FLAGS := $(strip $(C_DEBUG_FLAGS))
+C_RELEASE_FLAGS := $(strip $(C_RELEASE_FLAGS))
+CXX_DEBUG_FLAGS := $(strip $(CXX_DEBUG_FLAGS))
+CXX_RELEASE_FLAGS := $(strip $(CXX_RELEASE_FLAGS))
 
-# Create the static library
-$(LIB_NAME): $(OBJ)
-	ar rcs $@ $(OBJ)
+# Enable verbose output if VERBOSE=1 is specified during the build
+VERBOSE ?= 0
+ifeq ($(VERBOSE), 1)
+	Q :=
+else
+	Q := @
+endif
 
-# Clean old test logs before running tests
-clean_logs:
-	$(RM) $(TEST_LOGS)
+##
+# Compile and Link
+##
 
-# Build the test executable (Only compiles main.cpp here)
-test: clean_logs $(OBJ)
-	$(CXX) $(CXXFLAGS) main.cpp $(OBJ) -o $(TEST_NAME) $(LDLIBS)
-	@echo "Running LCBLog test mode."
-	$(Q)sudo ./$(TEST_NAME)
+# Compile C source files for debug
+$(OBJ_DIR_DEBUG)/%.o: %.c
+	$(Q)mkdir -p $(dir $@)
+	$(Q)mkdir -p $(DEP_DIR)/$(dir $<)
+	$(Q)echo "Compiling (debug) $< into $@"
+	$(Q)$(CC) $(C_DEBUG_FLAGS) -MF $(DEP_DIR)/$*.d -c $< -o $@
 
-# Compile source files into object files
-%.o: %.cpp
-	$(CXX) $(CXXFLAGS) -c $< -o $@
+# Compile C++ source files for debug
+$(OBJ_DIR_DEBUG)/%.o: %.cpp
+	$(Q)mkdir -p $(dir $@)
+	$(Q)mkdir -p $(DEP_DIR)/$(dir $<)
+	$(Q)echo "Compiling (debug) $< into $@"
+	$(Q)$(CXX) $(CXX_DEBUG_FLAGS) -MF $(DEP_DIR)/$*.d -c $< -o $@
 
-# Clean up build artifacts
+# Link the debug binary
+build/bin/$(TEST_OUT): $(patsubst %.cpp,$(OBJ_DIR_DEBUG)/%.o,$(CPP_SOURCES)) $(patsubst %.c,$(OBJ_DIR_DEBUG)/%.o,$(C_SOURCES))
+	$(Q)mkdir -p $(BIN_DIR)
+	$(Q)echo "Linking debug binary: $(TEST_OUT)"
+	$(Q)$(CXX) $(CXX_DEBUG_FLAGS) $^ -o build/bin/$(TEST_OUT) $(LDFLAGS)
+
+# Compile C++ source files (release)
+$(OBJ_DIR_RELEASE)/%.o: %.cpp
+	$(Q)mkdir -p $(dir $@)
+	$(Q)mkdir -p $(DEP_DIR)/$(dir $<)
+	$(Q)echo "Compiling (release) $< into $@"
+	$(Q)$(CXX) $(CXX_RELEASE_FLAGS) -MF $(DEP_DIR)/$*.d -c $< -o $@
+
+# Compile C source files (release)
+$(OBJ_DIR_RELEASE)/%.o: %.c
+	$(Q)mkdir -p $(dir $@)
+	$(Q)mkdir -p $(DEP_DIR)/$(dir $<)
+	$(Q)echo "Compiling (release) $< into $@"
+	$(Q)$(CC) $(C_RELEASE_FLAGS) -MF $(DEP_DIR)/$*.d -c $< -o $@
+
+# Link the final binary (release)
+build/bin/$(OUT): $(C_OBJECTS) $(CPP_OBJECTS)
+	$(Q)mkdir -p $(BIN_DIR)
+	$(Q)echo "Linking release binary: $(OUT)"
+	$(Q)$(CXX) $(CXX_RELEASE_FLAGS) $^ -o $@ $(LDFLAGS)
+
+##
+# Make Targets
+##
+
+# Force the fefault to be release (order matters in targets otherwise)
+.DEFAULT_GOAL := release
+
+# Clean dirs
+.PHONY: clean
 clean:
-	-$(RM) $(OBJ) $(DEP) $(LIB_NAME) $(TEST_NAME) $(TEST_LOGS)
+	$(Q)echo "Cleaning up build artifacts."
+	$(Q)rm -rf build
 
-# Include dependency files
--include $(DEP)
+# Release target
+.PHONY: release
+release: build/bin/$(OUT)
+	$(Q)echo "Release build completed successfully."
 
-# Debug build: compiles the library with debug flags enabled
-debug: clean
-debug: CXXFLAGS += -g
-debug: $(LIB_NAME)
+# Debug target
+.PHONY: debug
+debug: build/bin/$(TEST_OUT)
+	$(Q)echo "Debug build completed successfully."
 
-# Lint target: performs static code analysis with cppcheck
+# Test target
+.PHONY: test
+test: debug
+	$(Q)if [ "$(SUDO)" = "sudo" ]; then \
+        echo "Running test with sudo privileges."; \
+    else \
+        echo "Running test with user privileges."; \
+    fi
+	$(Q)$(SUDO) ./build/bin/$(TEST_OUT)
+
+# Show only user-defined macros
+.PHONY: macros
+macros:
+	$(Q)echo "Defined Project Macros:"
+	$(Q)$(CXX) $(CXXFLAGS) -dM -E -x c++ /dev/null | grep -v '^#define _' || true
+
+# Lint target
+.PHONY: lint
 lint:
-	@command -v cppcheck >/dev/null 2>&1 || { \
-	    echo "Error: cppcheck not found. Please install it using:"; \
-	    echo "  sudo apt install cppcheck   # Debian/Ubuntu"; \
-	    echo "  sudo dnf install cppcheck   # Fedora"; \
-	    echo "  brew install cppcheck       # macOS (Homebrew)"; \
-	    echo "  choco install cppcheck      # Windows (Chocolatey)"; \
+	$(Q)if ! command -v cppcheck >/dev/null 2>&1; then \
+	    echo "Warning: cppcheck is not installed. Please install it to run static analysis."; \
 	    exit 1; \
-	}
-	cppcheck --enable=all --inconclusive --max-configs=100 --std=c++17 --language=c++ $(SRC) --suppress=missingIncludeSystem
+	fi
+	$(Q)echo "Running static analysis with cppcheck."
+	$(Q)cppcheck --platform=unix32 --std=c++$(CXXVER) --enable=all --inconclusive --force --inline-suppr --quiet $(CPP_SOURCES)
 
-# Help target: displays available make targets and their descriptions
+# Display available make targets
+.PHONY: help
 help:
-	@echo "Available Make targets:"
-	@echo "  all        - Build the static library."
-	@echo "  test       - Build the test executable with debug flags."
-	@echo "  debug      - Build the static library with debugging symbols."
-	@echo "  lint       - Run cppcheck for static code analysis."
-	@echo "  clean      - Clean up build artifacts (object files, library, etc.)."
-	@echo "  help       - Display this help message."
-
-.PHONY: all test debug lint clean help clean_logs
+	$(Q)echo "Available targets:"
+	$(Q)echo "  all          Build the project (default: release)."
+	$(Q)echo "  clean        Remove build artifacts."
+	$(Q)echo "  test         Run the binary with the INI file."
+	$(Q)echo "  lint         Run static analysis."
+	$(Q)echo "  macros       Show defined project macros."
+	$(Q)echo "  debug        Build with debugging symbols."
+	$(Q)echo "  release      Build optimized for production."
+	$(Q)echo "  help         Show this help message."

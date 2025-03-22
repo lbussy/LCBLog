@@ -49,9 +49,10 @@
  * @param args Additional message content.
  */
 template <typename T, typename... Args>
-void LCBLog::log(LogLevel level, std::ostream& stream, T t, Args... args)
+void LCBLog::log(LogLevel level, std::ostream &stream, T t, Args... args)
 {
-    if (!shouldLog(level)) return;
+    if (!shouldLog(level))
+        return;
 
     // Format the log message first (reduces time holding the lock)
     std::ostringstream formattedStream;
@@ -78,13 +79,16 @@ void LCBLog::log(LogLevel level, std::ostream& stream, T t, Args... args)
  * @param args Additional message content.
  */
 template <typename T, typename... Args>
-void LCBLog::logToStream(std::ostream& stream, LogLevel level, T t, Args... args) {
+void LCBLog::logToStream(std::ostream &stream, LogLevel level, T t, Args... args)
+{
     std::ostringstream oss;
-    oss << t;  // First argument is directly added
+    oss << t; // First argument is directly added
 
     // Append additional arguments while handling spacing correctly
-    if constexpr (sizeof...(args) > 0) {
-        const auto appendArgs = [&](const auto& prev, const auto& first, const auto&... rest) {
+    if constexpr (sizeof...(args) > 0)
+    {
+        const auto appendArgs = [&](const auto &prev, const auto &first, const auto &...rest)
+        {
             oss << (shouldSkipSpace(prev, first) ? "" : " ") << first;
             ((oss << (shouldSkipSpace(first, rest) ? "" : " ") << rest), ...);
         };
@@ -97,15 +101,18 @@ void LCBLog::logToStream(std::ostream& stream, LogLevel level, T t, Args... args
     std::string line;
     bool firstLine = true;
 
-    constexpr int LOG_LEVEL_WIDTH = 5;  // Maximum length of log level names (DEBUG, ERROR, FATAL = 5)
+    constexpr int LOG_LEVEL_WIDTH = 5; // Maximum length of log level names (DEBUG, ERROR, FATAL = 5)
     std::string levelStr = logLevelToString(level);
-    levelStr.append(LOG_LEVEL_WIDTH - levelStr.size(), ' ');  // Pad to align all levels
+    levelStr.append(LOG_LEVEL_WIDTH - levelStr.size(), ' '); // Pad to align all levels
 
-    while (std::getline(messageStream, line)) {
-        if (!firstLine) stream << std::endl;
+    while (std::getline(messageStream, line))
+    {
+        if (!firstLine)
+            stream << std::endl;
 
-        crush(line);  // Remove excessive whitespace
-        if (printTimestamps) stream << getStamp() << "\t";
+        crush(line); // Remove excessive whitespace
+        if (printTimestamps)
+            stream << getStamp() << "\t";
 
         stream << "[" << levelStr << "] " << line;
         firstLine = false;
@@ -124,29 +131,34 @@ void LCBLog::logToStream(std::ostream& stream, LogLevel level, T t, Args... args
  * @return True if no space should be added before `arg`, false if space is needed.
  */
 template <typename PrevT, typename T>
-bool shouldSkipSpace(const PrevT& prevArg, const T& arg) {
+bool shouldSkipSpace(const PrevT &prevArg, const T &arg)
+{
     std::string prevStr;
     std::string argStr;
 
     // Convert previous argument to string (if possible)
-    if constexpr (std::is_convertible_v<PrevT, std::string>) {
+    if constexpr (std::is_convertible_v<PrevT, std::string>)
+    {
         prevStr = std::string(prevArg);
     }
 
     // Convert current argument to string (if possible)
-    if constexpr (std::is_convertible_v<T, std::string>) {
+    if constexpr (std::is_convertible_v<T, std::string>)
+    {
         argStr = std::string(arg);
     }
 
     // Remove space *before* punctuation marks and parentheses
     if (argStr.size() == 1 && (argStr == "." || argStr == "," || argStr == ";" || argStr == "!" ||
-                               argStr == ")" || argStr == "]" || argStr == "}")) {
-        return true;  // No space before these characters
+                               argStr == ")" || argStr == "]" || argStr == "}"))
+    {
+        return true; // No space before these characters
     }
 
     // Prevent a space *after* `(`, `[` or `{` by checking the last character of prevStr
-    if (!prevStr.empty() && (prevStr.back() == '(' || prevStr.back() == '[' || prevStr.back() == '{')) {
-        return true;  // No space after opening parenthesis
+    if (!prevStr.empty() && (prevStr.back() == '(' || prevStr.back() == '[' || prevStr.back() == '{'))
+    {
+        return true; // No space after opening parenthesis
     }
 
     return false;
