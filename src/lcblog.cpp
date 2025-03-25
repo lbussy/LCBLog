@@ -1,7 +1,7 @@
 /**
  * @file lcblog.cpp
  * @brief A logging class for handling log levels, formatting, and
- * timestamping within a C++ project.
+ * time stamping within a C++ project.
  *
  * This logging class provides a flexible and thread-safe logging mechanism
  * with support for multiple log levels, timestamped logs, and customizable
@@ -92,7 +92,7 @@ void LCBLog::setLogLevel(LogLevel level)
 }
 
 /**
- * @brief Enables or disables timestamping for log messages.
+ * @brief Enables or disables time stamping for log messages.
  *
  * @param enable If true, timestamps will be included in logs.
  */

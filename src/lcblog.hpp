@@ -1,10 +1,10 @@
 /**
  * @file lcblog.hpp
  * @brief A logging class for handling log levels, formatting, and
- * timestamping within a C++ project.
+ * time stamping within a C++ project.
  *
  * This logging class provides a flexible and thread-safe logging mechanism
- * with support for multiple log levels, timestamped logs, and customizable
+ * with support for multiple log levels, time stamped logs, and customizable
  * output streams. include the header (`lcblog.hpp`), implementation
  * (`lcblog.cpp`), and template definitions (`lcblog.tpp`) when using in
  * a project.
@@ -72,7 +72,7 @@ std::string logLevelToString(LogLevel level);
  * @brief A thread-safe logging class supporting multiple log levels.
  *
  * Provides a mechanism for logging messages with different severity levels,
- * timestamping, and customizable output streams.
+ * time stamping, and customizable output streams.
  */
 class LCBLog
 {
@@ -144,7 +144,7 @@ public:
     }
 
     /**
-     * @brief Enables or disables timestamping for log messages.
+     * @brief Enables or disables time stamping for log messages.
      *
      * @param enable If true, timestamps will be included in logs.
      */

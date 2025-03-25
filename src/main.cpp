@@ -1,7 +1,7 @@
 /**
  * @file main.cpp
- * @brief Test framnework for LCBLog, a logging class for handling log levels,
- * formatting, and timestamping within a C++ project.
+ * @brief Test framework for LCBLog, a logging class for handling log levels,
+ * formatting, and time stamping within a C++ project.
  *
  * This logging class provides a flexible and thread-safe logging mechanism
  * with support for multiple log levels, timestamped logs, and customizable
