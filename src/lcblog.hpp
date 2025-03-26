@@ -199,4 +199,6 @@ bool shouldSkipSpace(const PrevT &prevArg, const T &arg);
 
 #include "lcblog.tpp"
 
+extern LCBLog llog;
+
 #endif // LCBLOG_HPP

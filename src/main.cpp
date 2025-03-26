@@ -40,14 +40,6 @@
 #include <vector>
 #include <cassert>
 
-// Log to files
-// std::ofstream logFile("test_log.out");
-// std::ofstream errFile("test_log.err");
-// LCBLog llog(logFile, errFile);
-
-// Log to stdout/stderr
-LCBLog llog;
-
 void threadSafetyTest()
 {
     std::cout << "Testing thread safety..." << std::endl;
@@ -322,12 +314,13 @@ void testParentheses()
     llog.setLogLevel(DEBUG);
     llog.logS(INFO, "Testing1", "(", 0.0, ")");
     llog.logS(INFO, "Testing2", "(", 0.0, ").");
-    llog.logS(INFO, "Testing3 (", 0.0, ")");
+    llog.logS(INFO, "Testing3 (", 3.1415, ")");
 }
 
 int main()
 {
-    threadSafetyTest();
+    llog.enableTimestamps(true);
+    // threadSafetyTest();
     // logToDifferentStreamsTest();
     // crushTestViaLog();
     // multiLineLogTest();
@@ -336,6 +329,6 @@ int main()
     // longTest();
     // testShouldSkipSpace();
     // testMixedDataTypes();
-    // testParentheses();
+    testParentheses();
     return 0;
 }

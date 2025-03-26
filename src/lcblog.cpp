@@ -38,6 +38,8 @@
 #include <regex>
 #include <iostream>
 
+LCBLog llog;
+
 /**
  * @brief Converts a log level to its string representation.
  *
@@ -120,12 +122,24 @@ bool LCBLog::shouldLog(LogLevel level) const
  */
 std::string LCBLog::getStamp()
 {
-    char dts[24];
-    time_t t = time(nullptr);
-    struct tm tm;
-    gmtime_r(&t, &tm);
-    strftime(dts, sizeof(dts), "%F %T UTC", &tm);
-    return std::string(dts);
+    using namespace std::chrono;
+    // Get the current time_point
+    auto now = system_clock::now();
+    // Convert to time_t for formatting the date/time portion
+    auto now_time_t = system_clock::to_time_t(now);
+    // Get the number of milliseconds since the last whole second
+    auto now_ms = duration_cast<milliseconds>(now.time_since_epoch()) % 1000;
+
+    std::tm tm;
+    gmtime_r(&now_time_t, &tm);
+
+    std::ostringstream oss;
+    // Format the date and time
+    oss << std::put_time(&tm, "%F %T");
+    // Append the milliseconds and UTC label
+    oss << '.' << std::setfill('0') << std::setw(3) << now_ms.count() << " UTC";
+
+    return oss.str();
 }
 
 /**
