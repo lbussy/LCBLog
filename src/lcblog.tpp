@@ -81,16 +81,35 @@ void LCBLog::log(LogLevel level, std::ostream &stream, T t, Args... args)
 template <typename T, typename... Args>
 void LCBLog::logToStream(std::ostream &stream, LogLevel level, T t, Args... args)
 {
-    std::ostringstream oss;
-    oss << t; // First argument is directly added
+    // Helper lambda to convert any streamable type to a string with desired formatting.
+    auto toString = [](const auto &val) -> std::string {
+        std::ostringstream oss;
+        if constexpr (std::is_floating_point_v<std::decay_t<decltype(val)>>) {
+            // Check if the value is exactly an integer.
+            if (val == static_cast<long long>(val)) {
+                // For integer values like 0.0, force one decimal digit (e.g. "0.0")
+                oss << std::showpoint << std::fixed << std::setprecision(1);
+            }
+            // Otherwise, let the stream use its default formatting.
+        }
+        oss << val;
+        return oss.str();
+    };
 
-    // Append additional arguments while handling spacing correctly
+    std::ostringstream oss;
+    // Convert and print the first argument.
+    std::string prevStr = toString(t);
+    oss << prevStr;
+
     if constexpr (sizeof...(args) > 0)
     {
         const auto appendArgs = [&](const auto &prev, const auto &first, const auto &...rest)
         {
-            oss << (shouldSkipSpace(prev, first) ? "" : " ") << first;
-            ((oss << (shouldSkipSpace(first, rest) ? "" : " ") << rest), ...);
+            std::string prevS = toString(prev);
+            std::string firstS = toString(first);
+            // Use the string versions for spacing logic.
+            oss << (shouldSkipSpace(prevS, firstS) ? "" : " ") << firstS;
+            ((oss << (shouldSkipSpace(firstS, toString(rest)) ? "" : " ") << toString(rest)), ...);
         };
 
         appendArgs(t, args...);
@@ -101,16 +120,16 @@ void LCBLog::logToStream(std::ostream &stream, LogLevel level, T t, Args... args
     std::string line;
     bool firstLine = true;
 
-    constexpr int LOG_LEVEL_WIDTH = 5; // Maximum length of log level names (DEBUG, ERROR, FATAL = 5)
+    constexpr int LOG_LEVEL_WIDTH = 5; // e.g., "INFO " is padded to 5 characters.
     std::string levelStr = logLevelToString(level);
-    levelStr.append(LOG_LEVEL_WIDTH - levelStr.size(), ' '); // Pad to align all levels
+    levelStr.append(LOG_LEVEL_WIDTH - levelStr.size(), ' ');
 
     while (std::getline(messageStream, line))
     {
         if (!firstLine)
             stream << std::endl;
 
-        crush(line); // Remove excessive whitespace
+        crush(line); // Clean up whitespace.
         if (printTimestamps)
             stream << getStamp() << "\t";
 
@@ -133,33 +152,44 @@ void LCBLog::logToStream(std::ostream &stream, LogLevel level, T t, Args... args
 template <typename PrevT, typename T>
 bool shouldSkipSpace(const PrevT &prevArg, const T &arg)
 {
-    std::string prevStr;
-    std::string argStr;
+    auto toString = [](const auto &val) -> std::string {
+        std::ostringstream oss;
+        if constexpr (std::is_floating_point_v<std::decay_t<decltype(val)>>) {
+            // If the floating-point value is an integer value, force one decimal.
+            if (val == static_cast<long long>(val))
+                oss << std::showpoint << std::fixed << std::setprecision(1);
+            else
+                oss << std::showpoint;
+        }
+        oss << val;
+        return oss.str();
+    };
 
-    // Convert previous argument to string (if possible)
-    if constexpr (std::is_convertible_v<PrevT, std::string>)
-    {
-        prevStr = std::string(prevArg);
-    }
+    std::string prevStr = toString(prevArg);
+    std::string currStr = toString(arg);
 
-    // Convert current argument to string (if possible)
-    if constexpr (std::is_convertible_v<T, std::string>)
-    {
-        argStr = std::string(arg);
-    }
+    // If either string is empty, do not insert an extra space.
+    if (prevStr.empty() || currStr.empty())
+        return true;
 
-    // Remove space *before* punctuation marks and parentheses
-    if (argStr.size() == 1 && (argStr == "." || argStr == "," || argStr == ";" || argStr == "!" ||
-                               argStr == ")" || argStr == "]" || argStr == "}"))
-    {
-        return true; // No space before these characters
-    }
+    char last = prevStr.back();
+    char first = currStr.front();
 
-    // Prevent a space *after* `(`, `[` or `{` by checking the last character of prevStr
-    if (!prevStr.empty() && (prevStr.back() == '(' || prevStr.back() == '[' || prevStr.back() == '{'))
-    {
-        return true; // No space after opening parenthesis
-    }
+    // If the previous string already ends with whitespace, do nothing.
+    if (std::isspace(static_cast<unsigned char>(last)))
+        return true;
 
-    return false;
+    // If the previous segment ends with an opening punctuation, skip adding a space.
+    if (last == '(' || last == '[' || last == '{')
+        return true;
+
+    // If the current segment begins with a closing punctuation, skip adding a space.
+    if (first == ')' || first == ']' || first == '}')
+        return true;
+
+    // Otherwise, if the last character is alphanumeric or punctuation, we want a space.
+    if (std::isalnum(static_cast<unsigned char>(last)) || std::ispunct(static_cast<unsigned char>(last)))
+        return false;
+
+    return true;
 }
