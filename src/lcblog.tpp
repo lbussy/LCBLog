@@ -155,7 +155,6 @@ bool shouldSkipSpace(const PrevT &prevArg, const T &arg)
     auto toString = [](const auto &val) -> std::string {
         std::ostringstream oss;
         if constexpr (std::is_floating_point_v<std::decay_t<decltype(val)>>) {
-            // If the floating-point value is an integer value, force one decimal.
             if (val == static_cast<long long>(val))
                 oss << std::showpoint << std::fixed << std::setprecision(1);
             else
@@ -168,26 +167,25 @@ bool shouldSkipSpace(const PrevT &prevArg, const T &arg)
     std::string prevStr = toString(prevArg);
     std::string currStr = toString(arg);
 
-    // If either string is empty, do not insert an extra space.
     if (prevStr.empty() || currStr.empty())
         return true;
 
     char last = prevStr.back();
     char first = currStr.front();
 
-    // If the previous string already ends with whitespace, do nothing.
     if (std::isspace(static_cast<unsigned char>(last)))
         return true;
 
-    // If the previous segment ends with an opening punctuation, skip adding a space.
     if (last == '(' || last == '[' || last == '{')
         return true;
 
-    // If the current segment begins with a closing punctuation, skip adding a space.
     if (first == ')' || first == ']' || first == '}')
         return true;
 
-    // Otherwise, if the last character is alphanumeric or punctuation, we want a space.
+    // Never add a space before a period.
+    if (first == '.')
+        return true;
+
     if (std::isalnum(static_cast<unsigned char>(last)) || std::ispunct(static_cast<unsigned char>(last)))
         return false;
 
