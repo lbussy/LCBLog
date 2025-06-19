@@ -1,7 +1,7 @@
 /**
  * @file lcblog.cpp
- * @brief A logging class for handling log levels, formatting, and
- * time stamping within a C++ project.
+ * @brief A non-blocking logging class for handling log levels, formatting,
+ * and time stamping within a C++ project.
  *
  * This logging class provides a flexible and thread-safe logging mechanism
  * with support for multiple log levels, timestamped logs, and customizable
@@ -34,11 +34,13 @@
  */
 
 #include "lcblog.hpp"
-#include <algorithm>
-#include <regex>
-#include <iostream>
 
-LCBLog llog;
+#include <algorithm>
+#include <iostream>
+#include <regex>
+#include <thread>
+
+LCBLog llog(std::cout, std::cerr);
 
 /**
  * @brief Converts a log level to its string representation.
@@ -66,37 +68,158 @@ std::string logLevelToString(LogLevel level)
 }
 
 /**
- * @brief Constructs the logging class with specified output streams.
+ * @brief Constructs the logger and starts asynchronous worker threads.
  *
- * @param outStream The output stream for standard logs (default: std::cout).
- * @param errStream The output stream for error logs (default: std::cerr).
+ * Initializes the log level and binds the output streams for immediate flushing.
+ * Then spawns two worker threads—one for standard output and one for error output—
+ * each processing its own message queue.
+ *
+ * @param outStream Reference to the std::ostream for INFO/WARN/DEBUG logs.
+ * @param errStream Reference to the std::ostream for ERROR/FATAL logs.
  */
 LCBLog::LCBLog(std::ostream &outStream, std::ostream &errStream)
-    : logLevel(INFO), out(outStream), err(errStream)
+    : logLevel(INFO) // Default threshold to INFO level
+      ,
+      out(outStream) // Stream for non-error messages
+      ,
+      err(errStream) // Stream for error messages
 {
-    out << std::unitbuf; // Ensure immediate flushing
+    // Ensure both streams flush on every insertion
+    out << std::unitbuf;
     err << std::unitbuf;
+
+    // Launch worker thread to drain the stdout queue
+    outWorker_ = std::thread(
+        &LCBLog::workerLoop, this,
+        std::ref(outQueue_), std::ref(outMtx_),
+        std::ref(outCv_), std::ref(std::cout));
+
+    // Launch worker thread to drain the stderr queue
+    errWorker_ = std::thread(
+        &LCBLog::workerLoop, this,
+        std::ref(errQueue_), std::ref(errMtx_),
+        std::ref(errCv_), std::ref(std::cerr));
 }
 
 /**
- * @brief Sets the minimum log level for message output.
+ * @brief Cleans up the logger, ensuring remaining entries are processed.
  *
- * @param level The log level to set.
+ * Signals worker threads to stop, wakes them if they are waiting,
+ * and joins them so that all queued log messages are flushed before
+ * destruction completes.
+ */
+LCBLog::~LCBLog()
+{
+    // Tell workers to exit their processing loops
+    done_.store(true, std::memory_order_release);
+
+    // Wake up any workers that are waiting on the condition variables
+    outCv_.notify_all();
+    errCv_.notify_all();
+
+    // Wait for the stdout worker to finish draining its queue
+    if (outWorker_.joinable())
+    {
+        outWorker_.join();
+    }
+
+    // Wait for the stderr worker to finish draining its queue
+    if (errWorker_.joinable())
+    {
+        errWorker_.join();
+    }
+}
+
+/**
+ * @brief Processes queued log entries in batches on a background thread.
+ *
+ * This loop waits for new entries or a timeout, moves up to batchSize_
+ * messages into a local buffer, writes them to the output stream, and
+ * flushes when the batch is full or the flush interval has elapsed.
+ *
+ * @param queue Reference to the deque holding pending log entries.
+ * @param mtx Reference to the mutex protecting the queue.
+ * @param cv Reference to the condition variable for queue notifications.
+ * @param stream Reference to the output stream where log messages are written.
+ */
+void LCBLog::workerLoop(std::deque<std::unique_ptr<LogEntry>> &queue,
+                        std::mutex &mtx,
+                        std::condition_variable &cv,
+                        std::ostream &stream)
+{
+    std::vector<std::string> batch;
+    batch.reserve(batchSize_); // Allocate buffer for batch of log messages
+
+    auto lastFlush = std::chrono::steady_clock::now(); // Initialize last flush time
+
+    // Continue until shutdown is signaled and queue is empty
+    while (!done_.load(std::memory_order_acquire) || !queue.empty())
+    {
+        {
+            std::unique_lock<std::mutex> lk(mtx);
+            // Wake when new data arrives or flush interval elapses
+            cv.wait_for(lk, flushInterval_, [&]
+                        { return done_.load(std::memory_order_acquire) || !queue.empty(); });
+
+            // Move up to batchSize_ messages into the local buffer
+            while (!queue.empty() && batch.size() < batchSize_)
+            {
+                batch.emplace_back(std::move(queue.front()->msg));
+                queue.pop_front();
+            }
+        }
+
+        // Write batched messages to the output stream
+        for (auto &msg : batch)
+        {
+            stream << msg;
+        }
+
+        // Flush if the batch is full or the flush interval has elapsed
+        auto now = std::chrono::steady_clock::now();
+        if (batch.size() >= batchSize_ || now - lastFlush >= flushInterval_)
+        {
+            stream << std::flush;
+            lastFlush = now;
+        }
+
+        batch.clear(); // Clear the buffer for the next batch
+    }
+
+    // Drain any remaining messages after shutdown
+    {
+        std::lock_guard<std::mutex> lk(mtx);
+        while (!queue.empty())
+        {
+            stream << queue.front()->msg;
+            queue.pop_front();
+        }
+        stream << std::flush;
+    }
+}
+
+/**
+ * @brief Set the minimum log level for filtering messages.
+ *
+ * This method updates the internal log level threshold in a thread-safe manner,
+ * ensuring that subsequent log calls respect the new level.
+ *
+ * @param level New log level threshold.
  */
 void LCBLog::setLogLevel(LogLevel level)
 {
-    {
-        std::lock_guard<std::mutex> lock(logMutex);
-        logLevel = level;
-    }
-
-    // logS(level, "Log level changed to: ", logLevelToString(level));
+    std::lock_guard<std::mutex> lock(logMutex);
+    logLevel = level;
 }
 
 /**
- * @brief Enables or disables time stamping for log messages.
+ * @brief Enable or disable timestamping for log messages.
  *
- * @param enable If true, timestamps will be included in logs.
+ * This method updates the setting that determines whether each log
+ * line is prefixed with a timestamp. It acquires a lock to ensure
+ * thread safety when modifying the flag.
+ *
+ * @param enable True to include timestamps in logs, false to omit them.
  */
 void LCBLog::enableTimestamps(bool enable)
 {
@@ -105,10 +228,13 @@ void LCBLog::enableTimestamps(bool enable)
 }
 
 /**
- * @brief Checks if a message should be logged based on the current log level.
+ * @brief Determine if a message meets the current log level threshold.
  *
- * @param level The log level to check.
- * @return True if the message should be logged, otherwise false.
+ * This method compares the provided level against the internally stored
+ * threshold to decide whether the message should be emitted.
+ *
+ * @param level Log level of the message to evaluate.
+ * @return True if the message level is equal to or higher than the threshold.
  */
 bool LCBLog::shouldLog(LogLevel level) const
 {
@@ -116,81 +242,97 @@ bool LCBLog::shouldLog(LogLevel level) const
 }
 
 /**
- * @brief Generates a timestamp string for log entries.
+ * @brief Generate a UTC timestamp string with millisecond precision.
  *
- * @return A formatted timestamp string.
+ * This function retrieves the current system time in UTC, formats it as
+ * YYYY-MM-DD HH:MM:SS, appends a three-digit millisecond component, and
+ * tags the result with "UTC".
+ *
+ * @return A formatted timestamp string in UTC with millisecond precision.
  */
 std::string LCBLog::getStamp()
 {
     using namespace std::chrono;
-    // Get the current time_point
+
+    // Retrieve current time point and convert to time_t
     auto now = system_clock::now();
-    // Convert to time_t for formatting the date/time portion
     auto now_time_t = system_clock::to_time_t(now);
-    // Get the number of milliseconds since the last whole second
+
+    // Compute milliseconds past the current second
     auto now_ms = duration_cast<milliseconds>(now.time_since_epoch()) % 1000;
 
-    std::tm tm;
+    // Convert to UTC broken-down time
+    std::tm tm{};
     gmtime_r(&now_time_t, &tm);
 
+    // Format date and time, then append milliseconds and UTC label
     std::ostringstream oss;
-    // Format the date and time
     oss << std::put_time(&tm, "%F %T");
-    // Append the milliseconds and UTC label
     oss << '.' << std::setfill('0') << std::setw(3) << now_ms.count() << " UTC";
 
     return oss.str();
 }
 
 /**
- * @brief Cleans up a string by trimming whitespace and reducing consecutive spaces.
+ * @brief Sanitize a string by normalizing whitespace and punctuation spacing.
  *
- * @param s The string to sanitize.
+ * This method trims leading and trailing whitespace, collapses consecutive
+ * whitespace runs into a single space, removes spaces before common
+ * punctuation characters (comma, period, exclamation, question, semicolon,
+ * colon), and eliminates spaces immediately after '(' or immediately before ')'.
+ *
+ * @param s Reference to the string to be cleaned.
  */
 void LCBLog::crush(std::string &s)
 {
-    // Trim leading whitespace
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch)
-                                    { return !std::isspace(ch); }));
+    // Trim whitespace from both ends
+    static const std::regex trimRe(R"(^\s+|\s+$)");
+    s = std::regex_replace(s, trimRe, "");
 
-    // Trim trailing whitespace
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch)
-                         { return !std::isspace(ch); })
-                .base(),
-            s.end());
+    // Collapse multiple whitespace characters into one space
+    static const std::regex wsRe(R"(\s+)");
+    s = std::regex_replace(s, wsRe, " ");
 
-    // Reduce multiple spaces to a single space
-    s.erase(std::unique(s.begin(), s.end(), [](char a, char b)
-                        { return std::isspace(a) && std::isspace(b); }),
-            s.end());
+    // Remove spaces before punctuation characters
+    static const std::regex prePunctRe(R"(\s+([,\.!?:;]))");
+    s = std::regex_replace(s, prePunctRe, "$1");
+
+    // Remove spaces immediately after an opening parenthesis
+    static const std::regex parenOpenRe(R"(\(\s+)");
+    s = std::regex_replace(s, parenOpenRe, "(");
+
+    // Remove spaces immediately before a closing parenthesis
+    static const std::regex parenCloseRe(R"(\s+\))");
+    s = std::regex_replace(s, parenCloseRe, ")");
 }
 
 /**
- * @namespace (anonymous)
- * @brief Prevents unused function warnings by ensuring functions are referenced.
+ * @brief Prevent unused function warnings for key `LCBLog` methods.
  *
- * This anonymous namespace contains a workaround to prevent `cppcheck`
- * from flagging certain functions as unused when they are intentionally
- * not directly called in the current translation unit.
+ * This anonymous namespace references selected `LCBLog` member functions
+ * so that static analysis tools and the linker recognize them as used,
+ * avoiding unintended “unused” warnings.
  */
 namespace
 {
-
     /**
-     * @brief Suppresses unused function warnings.
+     * @brief Reference `LCBLog` methods to suppress warnings.
      *
-     * @note This function is never intended to be executed, only referenced.
+     * This function takes the addresses of critical `LCBLog` methods
+     * to ensure they are retained by the compiler and static analyzers.
      */
     void suppress_unused_warnings()
     {
-        (void)&LCBLog::setLogLevel;      ///< Explicitly reference function
-        (void)&LCBLog::enableTimestamps; ///< Explicitly reference function
+        (void)&LCBLog::setLogLevel;
+        (void)&LCBLog::enableTimestamps;
     }
 
     /**
-     * @brief Forces `suppress_unused_warnings()` to be referenced.
+     * @brief Invoke the suppression function at initialization.
      *
-     * @note The variable is never actually used at runtime, ensuring zero impact.
+     * This static variable is initialized by calling
+     * `suppress_unused_warnings()`, guaranteeing the function is
+     * emitted without altering runtime behavior.
      */
     static const auto _suppress = (suppress_unused_warnings(), 0);
-}
+} // namespace (anonymous)

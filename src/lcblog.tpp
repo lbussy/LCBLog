@@ -1,7 +1,7 @@
 /**
  * @file lcblog.tpp
- * @brief A logging class for handling log levels, formatting, and
- * time stamping within a C++ project.
+ * @brief A non-blocking logging class for handling log levels, formatting,
+ * and time stamping within a C++ project.
  *
  * This logging class provides a flexible and thread-safe logging mechanism
  * with support for multiple log levels, timestamped logs, and customizable
@@ -33,161 +33,226 @@
  * SOFTWARE.
  */
 
+#ifndef _LCBLOG_TPP
+#define _LCBLOG_TPP
+#pragma once
+
+#include "lcblog.hpp"
+
+#include <chrono>
+#include <iomanip>
 #include <iostream>
+#include <regex>
 #include <sstream>
 #include <string>
 #include <type_traits>
+#include <utility>
+#include <vector>
+
+#include <cctype>
 
 /**
- * @brief Logs a message at a given log level.
+ * @brief Enqueue a formatted log message for asynchronous processing.
  *
- * @tparam T The first type of the message content.
- * @tparam Args Variadic template arguments for additional message content.
- * @param level The log level of the message.
- * @param stream The output stream to write the log message to.
- * @param t The first message content.
- * @param args Additional message content.
+ * This template formats the provided arguments into a single string,
+ * selects the appropriate output queue (standard or error), and
+ * notifies a background worker without blocking the calling thread.
+ *
+ * @tparam Args Types of the message components.
+ * @param level Severity level of the message.
+ * @param args Components of the message to log.
  */
-template <typename T, typename... Args>
-void LCBLog::log(LogLevel level, std::ostream &stream, T t, Args... args)
+template<typename... Args>
+void LCBLog::log(LogLevel level, Args&&... args)
 {
-    if (!shouldLog(level))
+    if (!shouldLog(level)) {
         return;
-
-    // Format the log message first (reduces time holding the lock)
-    std::ostringstream formattedStream;
-    logToStream(formattedStream, level, t, args...);
-
-    {
-        // Lock only while writing to the actual output stream
-        std::lock_guard<std::mutex> lock(logMutex);
-        stream << formattedStream.str();
     }
-}
-
-/**
- * @brief Logs a formatted message to a specified stream.
- *
- * Processes multi-line messages, applies optional time stamping, and formats
- * the output with log level tags.
- *
- * @tparam T The first type of the message content.
- * @tparam Args Variadic template arguments for additional message content.
- * @param stream The output stream to write the log message to.
- * @param level The log level of the message.
- * @param t The first message content.
- * @param args Additional message content.
- */
-template <typename T, typename... Args>
-void LCBLog::logToStream(std::ostream &stream, LogLevel level, T t, Args... args)
-{
-    // Helper lambda to convert any streamable type to a string with desired formatting.
-    auto toString = [](const auto &val) -> std::string {
-        std::ostringstream oss;
-        if constexpr (std::is_floating_point_v<std::decay_t<decltype(val)>>) {
-            // Check if the value is exactly an integer.
-            if (val == static_cast<long long>(val)) {
-                // For integer values like 0.0, force one decimal digit (e.g. "0.0")
-                oss << std::showpoint << std::fixed << std::setprecision(1);
-            }
-            // Otherwise, let the stream use its default formatting.
-        }
-        oss << val;
-        return oss.str();
-    };
 
     std::ostringstream oss;
-    // Convert and print the first argument.
-    std::string prevStr = toString(t);
-    oss << prevStr;
+    logToStream(oss, level, std::forward<Args>(args)...);
 
-    if constexpr (sizeof...(args) > 0)
+    auto entry = std::make_unique<LogEntry>();
+    entry->msg  = std::move(oss.str());
+    entry->dest = (level >= LogLevel::ERROR
+                       ? ::LogEntry::Err
+                       : ::LogEntry::Out);
+
+    auto& queue = (entry->dest == ::LogEntry::Err ? errQueue_ : outQueue_);
+    auto& mtx   = (entry->dest == ::LogEntry::Err ? errMtx_   : outMtx_);
+    auto& cv    = (entry->dest == ::LogEntry::Err ? errCv_    : outCv_);
+
     {
-        const auto appendArgs = [&](const auto &prev, const auto &first, const auto &...rest)
-        {
-            std::string prevS = toString(prev);
-            std::string firstS = toString(first);
-            // Use the string versions for spacing logic.
-            oss << (shouldSkipSpace(prevS, firstS) ? "" : " ") << firstS;
-            ((oss << (shouldSkipSpace(firstS, toString(rest)) ? "" : " ") << toString(rest)), ...);
-        };
-
-        appendArgs(t, args...);
+        std::lock_guard<std::mutex> lock(mtx);
+        // drop oldest if we’re at capacity
+        if (queue.size() >= this->maxQueueSize_) {
+            queue.pop_front();
+        }
+        queue.push_back(std::move(entry));
     }
-
-    std::string logMessage = oss.str();
-    std::istringstream messageStream(logMessage);
-    std::string line;
-    bool firstLine = true;
-
-    constexpr int LOG_LEVEL_WIDTH = 5; // e.g., "INFO " is padded to 5 characters.
-    std::string levelStr = logLevelToString(level);
-    levelStr.append(LOG_LEVEL_WIDTH - levelStr.size(), ' ');
-
-    while (std::getline(messageStream, line))
-    {
-        if (!firstLine)
-            stream << std::endl;
-
-        crush(line); // Clean up whitespace.
-        if (printTimestamps)
-            stream << getStamp() << "\t";
-
-        stream << "[" << levelStr << "] " << line;
-        firstLine = false;
-    }
-    stream << std::endl;
-    stream.flush();
+    cv.notify_one();
 }
 
 /**
- * @brief Determines if a space should be adjusted around a given argument.
+ * @brief Format log message components and write to an output stream.
  *
- * Ensures correct spacing after colons and prevents spaces before punctuation.
+ * This template converts each argument to a string, applies spacing logic,
+ * splits on line breaks, applies optional timestamps and log level tags,
+ * and writes each line to the provided stream.
  *
- * @param prevArg The previous argument (for trailing spaces check).
- * @param arg The current argument.
- * @return True if no space should be added before `arg`, false if space is needed.
+ * @tparam T   Type of the first message component.
+ * @tparam Args Types of any additional components.
+ * @param stream Output stream for formatted log text.
+ * @param level Severity level of the message.
+ * @param t     First component of the message.
+ * @param args  Remaining components of the message.
  */
-template <typename PrevT, typename T>
-bool shouldSkipSpace(const PrevT &prevArg, const T &arg)
+template<typename T, typename... Args>
+void LCBLog::logToStream(std::ostream& stream,
+                         LogLevel       level,
+                         T&&            t,
+                         Args&&...      args)
 {
-    auto toString = [](const auto &val) -> std::string {
-        std::ostringstream oss;
+    // Build padded level tag
+    std::string levelStr = ::logLevelToString(level);
+    constexpr int LOG_LEVEL_WIDTH = 5;
+    if (levelStr.size() < LOG_LEVEL_WIDTH) {
+        levelStr.append(LOG_LEVEL_WIDTH - levelStr.size(), ' ');
+    }
+
+    // Prepare conversion lambda
+    auto toString = [&](auto&& val) {
+        std::ostringstream tmp;
         if constexpr (std::is_floating_point_v<std::decay_t<decltype(val)>>) {
-            if (val == static_cast<long long>(val))
-                oss << std::showpoint << std::fixed << std::setprecision(1);
-            else
-                oss << std::showpoint;
+            if (val == static_cast<long long>(val)) {
+                tmp << std::showpoint << std::fixed << std::setprecision(1);
+            }
         }
-        oss << val;
-        return oss.str();
+        tmp << val;
+        return tmp.str();
     };
 
-    std::string prevStr = toString(prevArg);
-    std::string currStr = toString(arg);
+    // Collect all parts as strings
+    std::vector<std::string> parts;
+    parts.reserve(1 + sizeof...(args));
+    parts.push_back(toString(std::forward<T>(t)));
+    (parts.push_back(toString(std::forward<Args>(args))), ...);
 
-    if (prevStr.empty() || currStr.empty())
-        return true;
+    // Recombine with spacing logic
+    std::ostringstream combined;
+    for (size_t i = 0; i < parts.size(); ++i) {
+        if (i > 0 && !::shouldSkipSpace(parts[i - 1], parts[i])) {
+            combined << ' ';
+        }
+        combined << parts[i];
+    }
 
-    char last = prevStr.back();
-    char first = currStr.front();
+    // Split lines, apply cleanup, timestamp, and tag
+    std::istringstream msgStream(combined.str());
+    std::string        line;
+    bool               firstLine  = true;
+    bool               printedAny = false;
 
-    if (std::isspace(static_cast<unsigned char>(last)))
-        return true;
+    while (std::getline(msgStream, line)) {
+        if (!firstLine) {
+            stream << std::endl;
+        }
+        if (printTimestamps) {
+            stream << getStamp() << "\t";
+        }
+        crush(line);
+        stream << "[" << levelStr << "] " << line;
+        firstLine  = false;
+        printedAny = true;
+    }
 
-    if (last == '(' || last == '[' || last == '{')
-        return true;
+    // Emit an empty entry if nothing was printed
+    if (!printedAny) {
+        if (printTimestamps) {
+            stream << getStamp() << "\t";
+        }
+        stream << "[" << levelStr << "] ";
+    }
 
-    if (first == ')' || first == ']' || first == '}')
-        return true;
-
-    // Never add a space before a period.
-    if (first == '.')
-        return true;
-
-    if (std::isalnum(static_cast<unsigned char>(last)) || std::ispunct(static_cast<unsigned char>(last)))
-        return false;
-
-    return true;
+    // Write final newline
+    stream << std::endl;
 }
+
+/**
+ * @brief Determine if a space should be omitted between two tokens.
+ *
+ * This free function returns true when the next token is empty or
+ * starts with punctuation, or when the previous token ends with
+ * whitespace. It returns false if a space is required before a word.
+ *
+ * @tparam PrevT Type of the previous token.
+ * @tparam T     Type of the next token.
+ * @param prevArg Previous token string.
+ * @param arg     Next token string.
+ * @return True if no space should be added, false otherwise.
+ */
+template<typename PrevT, typename T>
+bool shouldSkipSpace(const PrevT& prevArg, const T& arg)
+{
+    std::ostringstream ossPrev, ossCurr;
+    ossPrev << prevArg;
+    ossCurr << arg;
+    std::string prev = ossPrev.str();
+    std::string curr = ossCurr.str();
+
+    // Skip if next token is empty or begins with punctuation
+    if (curr.empty() || std::ispunct(static_cast<unsigned char>(curr.front()))) {
+        return true;
+    }
+
+    // Require space if this is the first token
+    if (prev.empty()) {
+        return false;
+    }
+
+    // Skip if previous ends in whitespace
+    if (std::isspace(static_cast<unsigned char>(prev.back()))) {
+        return true;
+    }
+
+    // Otherwise, add a space
+    return false;
+}
+
+/**
+ * @brief Convenience wrapper to log to standard‐output queue.
+ *
+ * Formats the arguments and enqueues the message with INFO/WARN/DEBUG
+ * semantics on the non‐error queue.
+ *
+ * @tparam T    Type of the first message component.
+ * @tparam Args Types of any additional components.
+ * @param level Severity level of the message.
+ * @param t     First component of the message.
+ * @param args  Remaining components of the message.
+ */
+template<typename T, typename... Args>
+void LCBLog::logS(LogLevel level, T&& t, Args&&... args)
+{
+    log(level, std::forward<T>(t), std::forward<Args>(args)...);
+}
+
+/**
+ * @brief Convenience wrapper to log to error‐output queue.
+ *
+ * Formats the arguments and enqueues the message with ERROR/FATAL
+ * semantics on the error queue.
+ *
+ * @tparam T    Type of the first message component.
+ * @tparam Args Types of any additional components.
+ * @param level Severity level of the message.
+ * @param t     First component of the message.
+ * @param args  Remaining components of the message.
+ */
+template<typename T, typename... Args>
+void LCBLog::logE(LogLevel level, T&& t, Args&&... args)
+{
+    log(level, std::forward<T>(t), std::forward<Args>(args)...);
+}
+
+#endif
