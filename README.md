@@ -29,6 +29,7 @@
 
 - Multiple **log levels** (`DEBUG`, `INFO`, `WARN`, `ERROR`, `FATAL`)
 - **Thread safety** using `std::mutex`
+- **Non-blocking** using internal thrteads and queues
 - **Timestamped logs** (optional)
 - **Customizable output streams** (supports redirection)
 - **Multi-line message handling**

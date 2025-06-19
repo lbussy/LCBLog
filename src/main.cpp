@@ -42,7 +42,7 @@
 
 void threadSafetyTest()
 {
-    std::cout << "Testing thread safety..." << std::endl;
+    std::cout << "Testing thread safety." << std::endl;
 
     // Lambda function to log in multiple threads
     auto logTask = [](int threadId)
@@ -65,8 +65,6 @@ void threadSafetyTest()
     {
         t.join();
     }
-
-    std::cout << "Thread safety test completed." << std::endl;
 }
 
 void logToDifferentStreamsTest()
@@ -78,18 +76,15 @@ void logToDifferentStreamsTest()
 
     // Log to stderr
     llog.logE(ERROR, "This is an ERROR message to stderr.");
-
-    std::cout << "Log output test completed." << std::endl;
 }
 
 void runLogLevelFilteringTests()
 {
-    std::cout << "Testing log level filtering..." << std::endl;
+    std::cout << "Testing log level filtering." << std::endl;
 
     // Set log level to DEBUG (lowest level)
-    llog.logS(FATAL, "Logging at DEBUG level...");
+    llog.logS(FATAL, "Logging at DEBUG level.");
     llog.setLogLevel(DEBUG);
-    std::cout << "Logging at DEBUG level..." << std::endl;
     llog.logS(DEBUG, "DEBUG log message");
     llog.logS(INFO, "INFO log message");
     llog.logS(WARN, "WARN log message");
@@ -97,9 +92,8 @@ void runLogLevelFilteringTests()
     llog.logS(FATAL, "FATAL log message");
 
     // Set log level to INFO
-    llog.logS(FATAL, "Logging at INFO level...");
+    llog.logS(FATAL, "Logging at INFO level.");
     llog.setLogLevel(INFO);
-    std::cout << "Logging at INFO level..." << std::endl;
     llog.logS(DEBUG, "DEBUG log message - this should not be here");
     llog.logS(INFO, "INFO log message");
     llog.logS(WARN, "WARN log message");
@@ -107,9 +101,8 @@ void runLogLevelFilteringTests()
     llog.logS(FATAL, "FATAL log message");
 
     // Set log level to WARN
-    llog.logS(FATAL, "Logging at WARN level...");
+    llog.logS(FATAL, "Logging at WARN level.");
     llog.setLogLevel(WARN);
-    std::cout << "Logging at WARN level..." << std::endl;
     llog.logS(DEBUG, "DEBUG log message - this should not be here");
     llog.logS(INFO, "INFO log message - this should not be here");
     llog.logS(WARN, "WARN log message");
@@ -117,9 +110,8 @@ void runLogLevelFilteringTests()
     llog.logS(FATAL, "FATAL log message");
 
     // Set log level to ERROR
-    llog.logS(FATAL, "Logging at ERROR level...");
+    llog.logS(FATAL, "Logging at ERROR level.");
     llog.setLogLevel(ERROR);
-    std::cout << "Logging at ERROR level..." << std::endl;
     llog.logS(DEBUG, "DEBUG log message - this should not be here");
     llog.logS(INFO, "INFO log message - this should not be here");
     llog.logS(WARN, "WARN log message - this should not be here");
@@ -127,21 +119,18 @@ void runLogLevelFilteringTests()
     llog.logS(FATAL, "FATAL log message");
 
     // Set log level to FATAL
-    llog.logS(FATAL, "Logging at FATAL level...");
+    llog.logS(FATAL, "Logging at FATAL level.");
     llog.setLogLevel(FATAL);
-    std::cout << "Logging at FATAL level..." << std::endl;
     llog.logS(DEBUG, "DEBUG log message - this should not be here");
     llog.logS(INFO, "INFO log message - this should not be here");
     llog.logS(WARN, "WARN log message - this should not be here");
     llog.logS(ERROR, "ERROR log message - this should not be here");
     llog.logS(FATAL, "FATAL log message");
-
-    std::cout << "Log level filtering tests completed." << std::endl;
 }
 
 void messageFormattingTest()
 {
-    std::cout << "Testing message formatting..." << std::endl;
+    std::cout << "Testing message formatting." << std::endl;
 
     // Set log level to DEBUG (lowest level)
     llog.setLogLevel(DEBUG);
@@ -152,13 +141,11 @@ void messageFormattingTest()
     llog.logS(WARN, "This is a WARN message with formatting.");
     llog.logS(ERROR, "This is an ERROR message with formatting.");
     llog.logS(FATAL, "This is a FATAL message with formatting.");
-
-    std::cout << "Message formatting test completed." << std::endl;
 }
 
 void crushTestViaLog()
 {
-    std::cout << "Testing crush function via log..." << std::endl;
+    std::cout << "Testing crush function via log." << std::endl;
 
     // Test case 1: String with leading and trailing spaces
     std::string testStr1 = "   Hello World   ";
@@ -194,28 +181,22 @@ void crushTestViaLog()
     std::string testStr7 = "   Hello   ";
     llog.logS(INFO, "Test 7: String with only one word");
     llog.logS(INFO, testStr7); // This should automatically be cleaned by crush
-
-    std::cout << "crush function via log test completed." << std::endl;
 }
 
 void multiLineLogTest()
 {
-    std::cout << "Testing multiline function via log..." << std::endl;
+    std::cout << "Testing multiline function via log." << std::endl;
 
     // Test case 1: String with leading and trailing spaces
     std::string testStr1 = "Line 1\nLine 2";
     llog.logS(INFO, "Testing: String with a linefeed");
     llog.logS(INFO, testStr1); // This should automatically be split
-
-    std::cout << "Line split function via log test completed." << std::endl;
 }
 
 void longTest()
 {
     llog.enableTimestamps(false);
     llog.setLogLevel(DEBUG);
-    std::cout << std::endl
-              << "Testing stdout." << std::endl;
     llog.logS(INFO, 100);
     llog.logS(INFO, 100.01);
     llog.logS(INFO, "\t\t\t\t\t\tFoo");
@@ -225,8 +206,6 @@ void longTest()
     llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
 
     llog.enableTimestamps(true);
-    std::cout << std::endl
-              << "Testing stdout with timestamps." << std::endl;
     llog.logS(INFO, 100);
     llog.logS(INFO, 100.01);
     llog.logS(INFO, "\t\t\t\t\t\tFoo");
@@ -236,8 +215,6 @@ void longTest()
     llog.logS(INFO, "Multiline ", 100.01, " \nNew line.");
 
     llog.enableTimestamps(false);
-    std::cerr << std::endl
-              << "Testing stderr." << std::endl;
     llog.logE(INFO, 100);
     llog.logE(INFO, 100.01);
     llog.logE(INFO, "\t\t\t\t\t\tFoo");
@@ -247,8 +224,6 @@ void longTest()
     llog.logE(INFO, "Multiline ", 100.01, " \nNew line.");
 
     llog.enableTimestamps(true);
-    std::cerr << std::endl
-              << "Testing stderr with timestamps." << std::endl;
     llog.logE(INFO, 100);
     llog.logE(INFO, 100.01);
     llog.logE(INFO, "\t\t\t\t\t\tFoo");
@@ -258,42 +233,9 @@ void longTest()
     llog.logE(INFO, "Multiline ", 100.01, " \nNew line.");
 }
 
-void testShouldSkipSpace()
-{
-    std::cout << "Running shouldSkipSpace() tests...\n";
-
-    // Test cases for punctuation handling
-    assert(shouldSkipSpace("Word", ".") == true); // No space before `.`
-    assert(shouldSkipSpace("Word", ",") == true); // No space before `,`
-    assert(shouldSkipSpace("Word", "!") == true); // No space before `!`
-    assert(shouldSkipSpace("Word", ";") == true); // No space before `;`
-
-    assert(shouldSkipSpace(":", "Word") == false); // Space after `:`
-    assert(shouldSkipSpace(".", "Word") == false); // Space after `.`
-    assert(shouldSkipSpace(",", "Word") == false); // Space after `,`
-    assert(shouldSkipSpace(";", "Word") == false); // Space after `;`
-
-    // Test with mixed types
-    assert(shouldSkipSpace(42, "Word") == false);   // int should not break it
-    assert(shouldSkipSpace(3.14, "Word") == false); // double should not break it
-    assert(shouldSkipSpace("Word", 100) == false);  // No space impact for int
-    assert(shouldSkipSpace("Word", 2.71) == false); // No space impact for double
-
-    // Edge cases
-    assert(shouldSkipSpace("", ".") == true); // Empty string before `.`
-    assert(shouldSkipSpace("", ",") == true); // Empty string before `,`
-    assert(shouldSkipSpace("", "!") == true); // Empty string before `!`
-    assert(shouldSkipSpace("", ";") == true); // Empty string before `;`
-
-    assert(shouldSkipSpace("", "Word") == false); // Empty before word (allow space)
-    assert(shouldSkipSpace(":", "") == false);    // Space after `:` even if empty
-
-    std::cout << "All shouldSkipSpace() tests passed successfully!\n";
-}
-
 void testMixedDataTypes()
 {
-    std::cout << "Running testMixedDataTypes()...\n";
+    std::cout << "Running testMixedDataTypes()." << std::endl;
 
     llog.logS(INFO, "Test start:", 42, "is an int,", 3.14159, "is Pi,", -7.25,
               "is negative,", "true", "is a bool,", nullptr, "is null,",
@@ -305,8 +247,6 @@ void testMixedDataTypes()
               "caret^", "pipe|", "tilde~", "backtick`");
 
     llog.logS(INFO, "Transmission completed,", "(", 0.000, "sec", ")");
-
-    std::cout << "Completed testMixedDataTypes(). Check log output.\n";
 }
 
 void testParentheses()
@@ -322,13 +262,12 @@ int main()
     llog.enableTimestamps(true);
     // threadSafetyTest();
     // logToDifferentStreamsTest();
-    // crushTestViaLog();
+    crushTestViaLog();
     // multiLineLogTest();
     // messageFormattingTest();
     // runLogLevelFilteringTests();
     // longTest();
-    // testShouldSkipSpace();
     // testMixedDataTypes();
-    testParentheses();
+    // testParentheses();
     return 0;
 }
