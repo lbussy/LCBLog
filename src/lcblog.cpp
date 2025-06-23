@@ -40,8 +40,6 @@
 #include <regex>
 #include <thread>
 
-LCBLog llog(std::cout, std::cerr);
-
 /**
  * @brief Converts a log level to its string representation.
  *
@@ -128,6 +126,37 @@ LCBLog::~LCBLog()
     {
         errWorker_.join();
     }
+}
+
+/**
+ * @brief Returns the singleton logger instance.
+ *
+ * Constructs the LCBLog instance on first invocation using the given
+ * output and error streams. Subsequent calls ignore their parameters
+ * and return the same instance.
+ *
+ * @param out The output stream for standard logs (default: std::cout)
+ * @param err The output stream for error logs (default: std::cerr)
+ * @return Reference to the global LCBLog singleton instance
+ */
+LCBLog &getLogger(std::ostream &out, std::ostream &err)
+{
+    // This static is constructed exactly once, on the first call.
+    static LCBLog instance{out, err};
+    return instance;
+}
+
+/**
+ * @brief Returns the singleton logger instance.
+ *
+ * Constructs the LCBLog instance on first invocation using default
+ * output and error streams. Subsequent calls ignore their parameters
+ * and return the same instance.
+ *
+ * @return Reference to the global LCBLog singleton instance
+ */
+LCBLog& getLogger() {
+    return getLogger(std::cout, std::cerr);
 }
 
 /**
