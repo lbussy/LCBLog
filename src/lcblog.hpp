@@ -151,175 +151,175 @@ public:
      */
     LCBLog &getLogger();
 
-        /**
-         * @brief Set the minimum log level for message output.
-         *
-         * Messages below this level are discarded.
-         *
-         * @param level New threshold for log message severity.
-         */
-        void setLogLevel(LogLevel level);
-
-        /**
-         * @brief Determine if a message meets the current log level threshold.
-         *
-         * @param level Severity level of the message to evaluate.
-         * @return true if the message level is equal to or higher than the threshold.
-         */
-        bool shouldLog(LogLevel level) const;
-
-        /**
-         * @brief Enable or disable timestamping for each log line.
-         *
-         * When enabled, each line is prefixed with a UTC timestamp.
-         *
-         * @param enable True to include timestamps, false to omit them.
-         */
-        void enableTimestamps(bool enable);
-
-        /**
-         * @brief Enqueue a formatted log message.
-         *
-         * This template formats the provided arguments into a single message
-         * and dispatches it to the appropriate worker queue without blocking.
-         *
-         * @tparam Args Types of the components to format.
-         * @param level Severity level of the message.
-         * @param args Components of the message to log.
-         */
-        template <typename... Args>
-        void log(LogLevel level, Args && ...args);
-
-        /**
-         * @brief Log a message to the info/output queue.
-         *
-         * Convenience wrapper for log() targeting standard output.
-         *
-         * @tparam T Type of the first argument.
-         * @tparam Args Types of any additional arguments.
-         * @param level Severity level of the message.
-         * @param t First part of the message.
-         * @param args Remaining parts of the message.
-         */
-        template <typename T, typename... Args>
-        void logS(LogLevel level, T && t, Args && ...args);
-
-        /**
-         * @brief Log a message to the error queue.
-         *
-         * Convenience wrapper for log() targeting error output.
-         *
-         * @tparam T Type of the first argument.
-         * @tparam Args Types of any additional arguments.
-         * @param level Severity level of the message.
-         * @param t First part of the message.
-         * @param args Remaining parts of the message.
-         */
-        template <typename T, typename... Args>
-        void logE(LogLevel level, T && t, Args && ...args);
-
-    private:
-        LogLevel logLevel;            /**< Threshold for message filtering. */
-        std::ostream &out;            /**< Stream for non-error messages. */
-        std::ostream &err;            /**< Stream for error messages. */
-        bool printTimestamps = false; /**< Flag to include timestamps. */
-        std::mutex logMutex;          /**< Protects configuration changes. */
-
-        /**
-         * @brief Sanitize a string by normalizing whitespace and punctuation spacing.
-         *
-         * This method trims leading and trailing whitespace, collapses consecutive
-         * whitespace runs into a single space, removes spaces before common
-         * punctuation characters (comma, period, exclamation, question, semicolon,
-         * colon), and eliminates spaces immediately after '(' or immediately before ')'.
-         *
-         * @param s Reference to the string to be cleaned.
-         */
-        static void crush(std::string & s); /**< Clean up whitespace and punctuation. */
-
-        /**
-         * @brief Generate a UTC timestamp string with millisecond precision.
-         *
-         * This function retrieves the current system time in UTC, formats it as
-         * YYYY-MM-DD HH:MM:SS, appends a three-digit millisecond component, and
-         * tags the result with "UTC".
-         *
-         * @return A formatted timestamp string in UTC with millisecond precision.
-         */
-        std::string getStamp(); /**< Generate a UTC timestamp string. */
-
-        /**
-         * @brief Format log message components and write to an output stream.
-         *
-         * This template converts each argument to a string, applies spacing logic,
-         * splits on line breaks, applies optional timestamps and log level tags,
-         * and writes each line to the provided stream.
-         *
-         * @tparam T   Type of the first message component.
-         * @tparam Args Types of any additional components.
-         * @param stream Output stream for formatted log text.
-         * @param level Severity level of the message.
-         * @param t     First component of the message.
-         * @param args  Remaining components of the message.
-         */
-        template <typename T, typename... Args>
-        void logToStream(std::ostream & stream,
-                         LogLevel level,
-                         T && t,
-                         Args && ...args);
-
-        std::deque<std::unique_ptr<LogEntry>> outQueue_; /**< Queue for standard output. */
-        std::deque<std::unique_ptr<LogEntry>> errQueue_; /**< Queue for error output. */
-        std::mutex outMtx_;                              /**< Protects outQueue_. */
-        std::mutex errMtx_;                              /**< Protects errQueue_. */
-        std::condition_variable outCv_;                  /**< Notifies outWorker_. */
-        std::condition_variable errCv_;                  /**< Notifies errWorker_. */
-
-        std::thread outWorker_;         /**< Worker for standard output. */
-        std::thread errWorker_;         /**< Worker for error output. */
-        std::atomic<bool> done_{false}; /**< Signal to stop worker loops. */
-
-        const size_t maxQueueSize_ = 1024;                   /**< Max messages in queue (discards oldest). */
-        const size_t batchSize_ = 16;                        /**< Messages per flush. */
-        const std::chrono::milliseconds flushInterval_{200}; /**< Flush interval. */
-
-        /**
-         * @brief Processes queued log entries in batches on a background thread.
-         *
-         * This loop waits for new entries or a timeout, moves up to batchSize_
-         * messages into a local buffer, writes them to the output stream, and
-         * flushes when the batch is full or the flush interval has elapsed.
-         *
-         * @param queue Reference to the deque holding pending log entries.
-         * @param mtx Reference to the mutex protecting the queue.
-         * @param cv Reference to the condition variable for queue notifications.
-         * @param stream Reference to the output stream where log messages are written.
-         */
-        void workerLoop(std::deque<std::unique_ptr<LogEntry>> & queue,
-                        std::mutex & mtx,
-                        std::condition_variable & cv,
-                        std::ostream & stream);
-    };
+    /**
+     * @brief Set the minimum log level for message output.
+     *
+     * Messages below this level are discarded.
+     *
+     * @param level New threshold for log message severity.
+     */
+    void setLogLevel(LogLevel level);
 
     /**
-     * @brief Determine if a space should be omitted between two tokens.
+     * @brief Determine if a message meets the current log level threshold.
      *
-     * This free function returns true when the next token is empty or
-     * starts with punctuation, or when the previous token ends with
-     * whitespace. It returns false if a space is required before a word.
-     *
-     * @tparam PrevT Type of the previous token.
-     * @tparam T     Type of the next token.
-     * @param prevArg Previous token string.
-     * @param arg     Next token string.
-     * @return True if no space should be added, false otherwise.
+     * @param level Severity level of the message to evaluate.
+     * @return true if the message level is equal to or higher than the threshold.
      */
-    template <typename PrevT, typename T>
-    bool shouldSkipSpace(const PrevT &prev, const T &curr);
+    bool shouldLog(LogLevel level) const;
+
+    /**
+     * @brief Enable or disable timestamping for each log line.
+     *
+     * When enabled, each line is prefixed with a UTC timestamp.
+     *
+     * @param enable True to include timestamps, false to omit them.
+     */
+    void enableTimestamps(bool enable);
+
+    /**
+     * @brief Enqueue a formatted log message.
+     *
+     * This template formats the provided arguments into a single message
+     * and dispatches it to the appropriate worker queue without blocking.
+     *
+     * @tparam Args Types of the components to format.
+     * @param level Severity level of the message.
+     * @param args Components of the message to log.
+     */
+    template <typename... Args>
+    void log(LogLevel level, Args &&...args);
+
+    /**
+     * @brief Log a message to the info/output queue.
+     *
+     * Convenience wrapper for log() targeting standard output.
+     *
+     * @tparam T Type of the first argument.
+     * @tparam Args Types of any additional arguments.
+     * @param level Severity level of the message.
+     * @param t First part of the message.
+     * @param args Remaining parts of the message.
+     */
+    template <typename T, typename... Args>
+    void logS(LogLevel level, T &&t, Args &&...args);
+
+    /**
+     * @brief Log a message to the error queue.
+     *
+     * Convenience wrapper for log() targeting error output.
+     *
+     * @tparam T Type of the first argument.
+     * @tparam Args Types of any additional arguments.
+     * @param level Severity level of the message.
+     * @param t First part of the message.
+     * @param args Remaining parts of the message.
+     */
+    template <typename T, typename... Args>
+    void logE(LogLevel level, T &&t, Args &&...args);
+
+private:
+    LogLevel logLevel;            /**< Threshold for message filtering. */
+    std::ostream &out;            /**< Stream for non-error messages. */
+    std::ostream &err;            /**< Stream for error messages. */
+    bool printTimestamps = false; /**< Flag to include timestamps. */
+    std::mutex logMutex;          /**< Protects configuration changes. */
+
+    /**
+     * @brief Sanitize a string by normalizing whitespace and punctuation spacing.
+     *
+     * This method trims leading and trailing whitespace, collapses consecutive
+     * whitespace runs into a single space, removes spaces before common
+     * punctuation characters (comma, period, exclamation, question, semicolon,
+     * colon), and eliminates spaces immediately after '(' or immediately before ')'.
+     *
+     * @param s Reference to the string to be cleaned.
+     */
+    static void crush(std::string &s); /**< Clean up whitespace and punctuation. */
+
+    /**
+     * @brief Generate a UTC timestamp string with millisecond precision.
+     *
+     * This function retrieves the current system time in UTC, formats it as
+     * YYYY-MM-DD HH:MM:SS, appends a three-digit millisecond component, and
+     * tags the result with "UTC".
+     *
+     * @return A formatted timestamp string in UTC with millisecond precision.
+     */
+    std::string getStamp(); /**< Generate a UTC timestamp string. */
+
+    /**
+     * @brief Format log message components and write to an output stream.
+     *
+     * This template converts each argument to a string, applies spacing logic,
+     * splits on line breaks, applies optional timestamps and log level tags,
+     * and writes each line to the provided stream.
+     *
+     * @tparam T   Type of the first message component.
+     * @tparam Args Types of any additional components.
+     * @param stream Output stream for formatted log text.
+     * @param level Severity level of the message.
+     * @param t     First component of the message.
+     * @param args  Remaining components of the message.
+     */
+    template <typename T, typename... Args>
+    void logToStream(std::ostream &stream,
+                     LogLevel level,
+                     T &&t,
+                     Args &&...args);
+
+    std::deque<std::unique_ptr<LogEntry>> outQueue_; /**< Queue for standard output. */
+    std::deque<std::unique_ptr<LogEntry>> errQueue_; /**< Queue for error output. */
+    std::mutex outMtx_;                              /**< Protects outQueue_. */
+    std::mutex errMtx_;                              /**< Protects errQueue_. */
+    std::condition_variable outCv_;                  /**< Notifies outWorker_. */
+    std::condition_variable errCv_;                  /**< Notifies errWorker_. */
+
+    std::thread outWorker_;         /**< Worker for standard output. */
+    std::thread errWorker_;         /**< Worker for error output. */
+    std::atomic<bool> done_{false}; /**< Signal to stop worker loops. */
+
+    const size_t maxQueueSize_ = 1024;                   /**< Max messages in queue (discards oldest). */
+    const size_t batchSize_ = 16;                        /**< Messages per flush. */
+    const std::chrono::milliseconds flushInterval_{200}; /**< Flush interval. */
+
+    /**
+     * @brief Processes queued log entries in batches on a background thread.
+     *
+     * This loop waits for new entries or a timeout, moves up to batchSize_
+     * messages into a local buffer, writes them to the output stream, and
+     * flushes when the batch is full or the flush interval has elapsed.
+     *
+     * @param queue Reference to the deque holding pending log entries.
+     * @param mtx Reference to the mutex protecting the queue.
+     * @param cv Reference to the condition variable for queue notifications.
+     * @param stream Reference to the output stream where log messages are written.
+     */
+    void workerLoop(std::deque<std::unique_ptr<LogEntry>> &queue,
+                    std::mutex &mtx,
+                    std::condition_variable &cv,
+                    std::ostream &stream);
+};
+
+/**
+ * @brief Determine if a space should be omitted between two tokens.
+ *
+ * This free function returns true when the next token is empty or
+ * starts with punctuation, or when the previous token ends with
+ * whitespace. It returns false if a space is required before a word.
+ *
+ * @tparam PrevT Type of the previous token.
+ * @tparam T     Type of the next token.
+ * @param prevArg Previous token string.
+ * @param arg     Next token string.
+ * @return True if no space should be added, false otherwise.
+ */
+template <typename PrevT, typename T>
+bool shouldSkipSpace(const PrevT &prev, const T &curr);
 
 #include "lcblog.tpp"
 
-    LCBLog &getLogger();
+LCBLog &getLogger();
 
 #define llog getLogger()
 
